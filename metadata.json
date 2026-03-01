@@ -1,0 +1,7 @@
+{
+  "name": "Gemini Live Transcribe",
+  "description": "A real-time conversational voice application powered by Gemini 2.5 Native Audio API with live transcription and session history.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
