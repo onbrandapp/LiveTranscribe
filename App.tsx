@@ -30,6 +30,16 @@ const App: React.FC = () => {
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
   
+  const [apiKey, setApiKey] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gemini_api_key');
+      return saved || (process.env.API_KEY || '');
+    }
+    return '';
+  });
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const [tempKey, setTempKey] = useState(apiKey);
+  
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isModelSpeaking, setIsModelSpeaking] = useState(false);
 
@@ -57,6 +67,12 @@ const App: React.FC = () => {
   }, [theme]);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+
+  const saveApiKey = () => {
+    setApiKey(tempKey);
+    localStorage.setItem('gemini_api_key', tempKey);
+    setIsKeyModalOpen(false);
+  };
 
   const closeDrawer = useCallback(() => {
     setIsDrawerClosing(true);
@@ -137,8 +153,12 @@ const App: React.FC = () => {
   }, []);
 
   const startSession = async () => {
+    if (!apiKey) {
+      setIsKeyModalOpen(true);
+      return;
+    }
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey });
 
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
@@ -318,6 +338,19 @@ const App: React.FC = () => {
         
         <div className="flex items-center gap-3">
           <button 
+            onClick={() => {
+              setTempKey(apiKey);
+              setIsKeyModalOpen(true);
+            }}
+            className="p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center gap-2"
+            title="API Settings"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+            <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Key</span>
+          </button>
+          <button 
             onClick={toggleTheme}
             className="p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
           >
@@ -436,6 +469,58 @@ const App: React.FC = () => {
                   <span className="text-[11px] font-black uppercase tracking-widest">{lang.name}</span>
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* API Key Modal */}
+      {isKeyModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 dark:bg-black/80 overlay-blur animate-fade-in" onClick={() => setIsKeyModalOpen(false)}></div>
+          <div className="relative w-full max-w-md bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-3xl shadow-2xl p-8 animate-slide-up">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-banana rounded-2xl flex items-center justify-center shadow-lg shadow-banana/20">
+                <svg className="w-6 h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">API Settings</h3>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-white/30 uppercase tracking-widest">Gemini API Configuration</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 dark:text-white/30 uppercase mb-2 tracking-[0.2em]">Gemini API Key</label>
+                <input 
+                  type="password"
+                  value={tempKey}
+                  onChange={(e) => setTempKey(e.target.value)}
+                  placeholder="Enter your API key..."
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-4 text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-banana/50 focus:border-banana outline-none transition-all"
+                />
+                <p className="mt-2 text-[10px] text-slate-400 dark:text-white/20 leading-relaxed">
+                  Your key is stored locally in your browser and never sent to our servers. 
+                  Get one at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-banana hover:underline">Google AI Studio</a>.
+                </p>
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <button 
+                  onClick={() => setIsKeyModalOpen(false)}
+                  className="flex-1 py-4 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/50 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={saveApiKey}
+                  className="flex-1 py-4 bg-banana hover:bg-[#EED125] text-black rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-banana/10 transition-all"
+                >
+                  Save Key
+                </button>
+              </div>
             </div>
           </div>
         </div>
