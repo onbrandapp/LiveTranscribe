@@ -29,6 +29,7 @@ const App: React.FC = () => {
   const [isDrawerRendered, setIsDrawerRendered] = useState(false);
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
+  const [inputText, setInputText] = useState('');
   
   const [apiKey, setApiKey] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -72,6 +73,31 @@ const App: React.FC = () => {
     setApiKey(tempKey);
     localStorage.setItem('gemini_api_key', tempKey);
     setIsKeyModalOpen(false);
+  };
+
+  const handleTextSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim() || !sessionPromiseRef.current) return;
+
+    const textToSend = inputText.trim();
+    setInputText('');
+
+    try {
+      const session = await sessionPromiseRef.current;
+      
+      // Manually add the user's text to the transcript feed for immediate feedback
+      updateTranscription(Speaker.USER, textToSend, true);
+      
+      // Send the text content to the Live session
+      // Using sendClientContent which is the correct way to send text turns in Live API
+      session.sendClientContent({ 
+        turns: [{ role: 'user', parts: [{ text: textToSend }] }],
+        turnComplete: true 
+      });
+    } catch (err) {
+      console.error("Failed to send text input:", err);
+      setSessionState(s => ({ ...s, error: 'Failed to send message. Please try again.' }));
+    }
   };
 
   const closeDrawer = useCallback(() => {
@@ -178,12 +204,12 @@ const App: React.FC = () => {
 
       const systemInstruction = isTranslationEnabled 
         ? `You are a high-fidelity real-time audio translator. 
-           Your ONLY job is to listen to the user and translate their speech into ${targetLanguage.name}.
+           Your ONLY job is to translate the user's speech or text input into ${targetLanguage.name}.
            - Provide ONLY the translation in your audio output.
            - Ensure the transcription matches your spoken translation exactly.
            - Include proper punctuation and capitalization.`
         : `You are a helpful and concise AI conversationalist. 
-           - Respond naturally and briefly to the user.
+           - Respond naturally and briefly to the user's speech or text input.
            - Ensure all transcriptions include proper punctuation and capitalization.
            - Your primary goal is to provide useful information while being transcribed in real-time.`;
 
@@ -447,6 +473,29 @@ const App: React.FC = () => {
             <button onClick={() => setTranscripts([])} className="text-[9px] font-black text-slate-300 dark:text-white/20 hover:text-red-500 uppercase tracking-widest transition-colors">Clear</button>
           </div>
           <TranscriptionList transcripts={transcripts} />
+          
+          {/* Keyboard Input Bar */}
+          <div className="p-4 border-t border-black/5 dark:border-white/5 bg-white/50 dark:bg-surface-dark/50 backdrop-blur-xl">
+            <form onSubmit={handleTextSubmit} className="relative flex items-center gap-2">
+              <input 
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder={isTranslationEnabled ? `Type text to translate to ${targetLanguage.name}...` : "Type a message..."}
+                disabled={!sessionState.isActive}
+                className="w-full bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-4 pr-12 text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-banana/50 focus:border-banana outline-none transition-all disabled:opacity-50 placeholder:text-slate-400 dark:placeholder:text-white/20"
+              />
+              <button 
+                type="submit"
+                disabled={!sessionState.isActive || !inputText.trim()}
+                className="absolute right-2 p-2 bg-banana text-black rounded-xl shadow-lg shadow-banana/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-0 disabled:scale-90"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+              </button>
+            </form>
+          </div>
         </div>
       </main>
 
