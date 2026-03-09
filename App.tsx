@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
-import { Speaker, TranscriptEntry, LiveSessionState, SUPPORTED_LANGUAGES, Language, UserRole, Voice, AVAILABLE_VOICES } from './types';
+import { Speaker, TranscriptEntry, LiveSessionState, SUPPORTED_LANGUAGES, Language, Voice, AVAILABLE_VOICES } from './types';
 import { decode, decodeAudioData, createPcmBlob } from './services/audio-helpers';
 import TranscriptionList from './components/TranscriptionList';
 import Visualizer from './components/Visualizer';
@@ -27,7 +27,6 @@ const App: React.FC = () => {
   const [isTranslationEnabled, setIsTranslationEnabled] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState<Language>(SUPPORTED_LANGUAGES[0]); // English default
   const [selectedVoice, setSelectedVoice] = useState<Voice>(AVAILABLE_VOICES[0]); // Zephyr default
-  const [userRole, setUserRole] = useState<UserRole>(UserRole.ADMIN);
   const [isDrawerRendered, setIsDrawerRendered] = useState(false);
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
@@ -71,12 +70,6 @@ const App: React.FC = () => {
   }, [theme]);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-
-  const isAdmin = userRole === UserRole.ADMIN;
-
-  const toggleRole = () => {
-    setUserRole(prev => prev === UserRole.ADMIN ? UserRole.USER : UserRole.ADMIN);
-  };
 
   const saveApiKey = () => {
     setApiKey(tempKey);
@@ -408,32 +401,13 @@ const App: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* Role Switcher */}
-          <div className="flex items-center bg-slate-100 dark:bg-white/5 p-1 rounded-xl border border-black/5 dark:border-white/10">
-            <button 
-              onClick={() => setUserRole(UserRole.USER)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${userRole === UserRole.USER ? 'bg-white dark:bg-matte shadow-sm text-slate-900 dark:text-white' : 'text-slate-400 dark:text-white/20 hover:text-slate-600'}`}
-            >
-              User
-            </button>
-            <button 
-              onClick={() => setUserRole(UserRole.ADMIN)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${userRole === UserRole.ADMIN ? 'bg-banana shadow-sm text-black' : 'text-slate-400 dark:text-white/20 hover:text-slate-600'}`}
-            >
-              Admin
-            </button>
-          </div>
-
           <button 
             onClick={() => {
-              if (isAdmin) {
-                setTempKey(apiKey);
-                setIsKeyModalOpen(true);
-              }
+              setTempKey(apiKey);
+              setIsKeyModalOpen(true);
             }}
-            disabled={!isAdmin}
-            className={`p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl transition-all flex items-center gap-2 ${isAdmin ? 'text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10' : 'opacity-30 cursor-not-allowed text-slate-400'}`}
-            title={isAdmin ? "API Settings" : "Admin Only"}
+            className="p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center gap-2"
+            title="API Settings"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
@@ -464,9 +438,9 @@ const App: React.FC = () => {
                 <p className="text-[10px] text-slate-400 dark:text-white/20">Beta Feature</p>
               </div>
               <button 
-                onClick={() => isAdmin && setIsTranslationEnabled(!isTranslationEnabled)}
-                disabled={sessionState.isActive || !isAdmin}
-                className={`w-10 h-6 rounded-full transition-all relative ${isTranslationEnabled ? 'bg-banana' : 'bg-slate-200 dark:bg-white/10'} ${sessionState.isActive || !isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={() => setIsTranslationEnabled(!isTranslationEnabled)}
+                disabled={sessionState.isActive}
+                className={`w-10 h-6 rounded-full transition-all relative ${isTranslationEnabled ? 'bg-banana' : 'bg-slate-200 dark:bg-white/10'} ${sessionState.isActive ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white dark:bg-matte shadow-sm transition-all ${isTranslationEnabled ? 'left-5' : 'left-1'}`}></div>
               </button>
@@ -475,7 +449,7 @@ const App: React.FC = () => {
             <div className={`${!isTranslationEnabled ? 'opacity-30 grayscale pointer-events-none' : 'opacity-100'} transition-all duration-300`}>
               <label className="block text-[10px] font-black text-slate-400 dark:text-white/30 uppercase mb-2 md:mb-3 tracking-[0.2em]">Translation Target</label>
               <button 
-                disabled={!isTranslationEnabled || sessionState.isActive || !isAdmin}
+                disabled={!isTranslationEnabled || sessionState.isActive}
                 onClick={openDrawer}
                 className="w-full flex items-center justify-between bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-2.5 md:p-3 text-sm font-bold text-slate-700 dark:text-white hover:border-banana/50 transition-all disabled:opacity-50"
               >
@@ -483,7 +457,7 @@ const App: React.FC = () => {
                   <span className="text-xl">{targetLanguage.flag}</span>
                   <span>{targetLanguage.name}</span>
                 </span>
-                {!sessionState.isActive && isTranslationEnabled && isAdmin && <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>}
+                {!sessionState.isActive && isTranslationEnabled && <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>}
               </button>
             </div>
 
@@ -494,13 +468,13 @@ const App: React.FC = () => {
                 {AVAILABLE_VOICES.map(voice => (
                   <button
                     key={voice.id}
-                    disabled={sessionState.isActive || !isAdmin}
+                    disabled={sessionState.isActive}
                     onClick={() => setSelectedVoice(voice)}
                     className={`w-full flex flex-col items-start p-3 rounded-xl border transition-all ${
                       selectedVoice.id === voice.id 
                         ? 'bg-banana/10 border-banana text-slate-900 dark:text-white' 
                         : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-500 dark:text-white/40 hover:border-banana/30'
-                    } ${sessionState.isActive || !isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    } ${sessionState.isActive ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <span className="text-xs font-black uppercase tracking-widest">{voice.name}</span>
@@ -541,21 +515,19 @@ const App: React.FC = () => {
             {!sessionState.isActive ? (
               <button 
                 onClick={startSession}
-                disabled={!isAdmin}
-                className={`w-full py-4 bg-banana hover:bg-[#EED125] active:scale-[0.98] transition-all rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-banana/10 text-black ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className="w-full py-4 bg-banana hover:bg-[#EED125] active:scale-[0.98] transition-all rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-banana/10 text-black"
               >
-                {isAdmin ? 'Start Live Transcribe' : 'Session Inactive'}
+                Start Live Transcribe
               </button>
             ) : (
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={togglePause}
-                  disabled={!isAdmin}
                   className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 transition-all flex items-center justify-center gap-3 ${
                     sessionState.isPaused 
                       ? 'bg-banana border-banana text-black shadow-lg shadow-banana/20' 
                       : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-700 dark:text-white'
-                  } ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  }`}
                 >
                   {sessionState.isPaused ? (
                     <><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Resume Session</>
@@ -565,8 +537,7 @@ const App: React.FC = () => {
                 </button>
                 <button 
                   onClick={stopSession}
-                  disabled={!isAdmin}
-                  className={`w-full py-4 bg-white dark:bg-white/5 border border-red-500/20 text-red-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-500/5 transition-all ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className="w-full py-4 bg-white dark:bg-white/5 border border-red-500/20 text-red-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-500/5 transition-all"
                 >
                   End Session
                 </button>
@@ -591,15 +562,14 @@ const App: React.FC = () => {
               </div>
               <button 
                 onClick={exportTranscript}
-                disabled={transcripts.length === 0 || !isAdmin}
-                className={`text-[9px] font-black text-slate-300 dark:text-white/20 hover:text-banana uppercase tracking-widest transition-colors ${(!isAdmin || transcripts.length === 0) ? 'opacity-0 pointer-events-none' : ''}`}
+                disabled={transcripts.length === 0}
+                className="text-[9px] font-black text-slate-300 dark:text-white/20 hover:text-banana uppercase tracking-widest transition-colors disabled:opacity-0"
               >
                 Export
               </button>
               <button 
-                onClick={() => isAdmin && setTranscripts([])} 
-                disabled={!isAdmin}
-                className={`text-[9px] font-black text-slate-300 dark:text-white/20 hover:text-red-500 uppercase tracking-widest transition-colors ${!isAdmin ? 'opacity-0 pointer-events-none' : ''}`}
+                onClick={() => setTranscripts([])} 
+                className="text-[9px] font-black text-slate-300 dark:text-white/20 hover:text-red-500 uppercase tracking-widest transition-colors"
               >
                 Clear
               </button>
@@ -636,21 +606,19 @@ const App: React.FC = () => {
           {!sessionState.isActive ? (
             <button 
               onClick={startSession}
-              disabled={!isAdmin}
-              className={`w-full py-4 bg-banana hover:bg-[#EED125] active:scale-[0.98] transition-all rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-banana/10 text-black ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className="w-full py-4 bg-banana hover:bg-[#EED125] active:scale-[0.98] transition-all rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-banana/10 text-black"
             >
-              {isAdmin ? 'Start Live Transcribe' : 'Session Inactive'}
+              Start Live Transcribe
             </button>
           ) : (
             <div className="flex gap-3">
               <button 
                 onClick={togglePause}
-                disabled={!isAdmin}
                 className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border-2 transition-all flex items-center justify-center gap-2 ${
                   sessionState.isPaused 
                     ? 'bg-banana border-banana text-black shadow-lg shadow-banana/20' 
                     : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-700 dark:text-white'
-                } ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                }`}
               >
                 {sessionState.isPaused ? (
                   <><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Resume</>
@@ -660,8 +628,7 @@ const App: React.FC = () => {
               </button>
               <button 
                 onClick={stopSession}
-                disabled={!isAdmin}
-                className={`flex-1 py-4 bg-white dark:bg-white/5 border border-red-500/20 text-red-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500/5 transition-all ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className="flex-1 py-4 bg-white dark:bg-white/5 border border-red-500/20 text-red-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500/5 transition-all"
               >
                 End Session
               </button>
