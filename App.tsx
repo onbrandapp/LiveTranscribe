@@ -100,6 +100,37 @@ const App: React.FC = () => {
     }
   };
 
+  const exportTranscript = () => {
+    if (transcripts.length === 0) return;
+    
+    const content = transcripts.map(entry => {
+      const time = new Date(entry.timestamp).toLocaleTimeString();
+      const speaker = entry.speaker === Speaker.MODEL ? 'Gemini' : (entry.speaker === Speaker.USER ? 'User' : 'Unknown');
+      
+      // Check for internal speaker labels if any
+      const speakerRegex = /^(Speaker [A-Z0-9]+):/i;
+      const match = entry.text.match(speakerRegex);
+      const label = match ? match[1] : speaker;
+      const text = match ? entry.text.replace(speakerRegex, '').trim() : entry.text;
+
+      let line = `[${time}] ${label}: ${text}`;
+      if (entry.translatedText) {
+        line += `\nTranslation (${targetLanguage.name}): ${entry.translatedText}`;
+      }
+      return line;
+    }).join('\n\n');
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcript-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const closeDrawer = useCallback(() => {
     setIsDrawerClosing(true);
     setTimeout(() => {
@@ -485,6 +516,13 @@ const App: React.FC = () => {
                   size="sm"
                 />
               </div>
+              <button 
+                onClick={exportTranscript}
+                disabled={transcripts.length === 0}
+                className="text-[9px] font-black text-slate-300 dark:text-white/20 hover:text-banana uppercase tracking-widest transition-colors disabled:opacity-0"
+              >
+                Export
+              </button>
               <button onClick={() => setTranscripts([])} className="text-[9px] font-black text-slate-300 dark:text-white/20 hover:text-red-500 uppercase tracking-widest transition-colors">Clear</button>
             </div>
           </div>
