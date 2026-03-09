@@ -5,9 +5,10 @@ interface VisualizerProps {
   isUserSpeaking: boolean;
   isModelSpeaking: boolean;
   theme: 'light' | 'dark';
+  size?: 'default' | 'sm';
 }
 
-const Visualizer: React.FC<VisualizerProps> = ({ isActive, isUserSpeaking, isModelSpeaking, theme }) => {
+const Visualizer: React.FC<VisualizerProps> = ({ isActive, isUserSpeaking, isModelSpeaking, theme, size = 'default' }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -17,9 +18,10 @@ const Visualizer: React.FC<VisualizerProps> = ({ isActive, isUserSpeaking, isMod
     if (!ctx) return;
 
     let animationFrameId: number;
-    const bars = 24;
-    const barWidth = 3;
-    const spacing = 5;
+    const isSmall = size === 'sm';
+    const bars = isSmall ? 12 : 24;
+    const barWidth = isSmall ? 2 : 3;
+    const spacing = isSmall ? 3 : 5;
     const heights = new Array(bars).fill(4);
 
     const render = () => {
@@ -38,8 +40,8 @@ const Visualizer: React.FC<VisualizerProps> = ({ isActive, isUserSpeaking, isMod
           multiplier = 1 - distFromCenter;
         }
 
-        const baseHeight = isActive ? (isUserSpeaking || isModelSpeaking ? 12 : 4) : 2;
-        const targetHeight = baseHeight + (Math.random() * (isUserSpeaking || isModelSpeaking ? 40 : 2) * multiplier);
+        const baseHeight = isActive ? (isUserSpeaking || isModelSpeaking ? (isSmall ? 6 : 12) : 4) : 2;
+        const targetHeight = baseHeight + (Math.random() * (isUserSpeaking || isModelSpeaking ? (isSmall ? 20 : 40) : 2) * multiplier);
         
         heights[i] = heights[i] + (targetHeight - heights[i]) * 0.2;
 
@@ -55,7 +57,7 @@ const Visualizer: React.FC<VisualizerProps> = ({ isActive, isUserSpeaking, isMod
         }
         
         ctx.beginPath();
-        ctx.roundRect(x, centerY - h / 2, barWidth, h, 2);
+        ctx.roundRect(x, centerY - h / 2, barWidth, h, isSmall ? 1 : 2);
         ctx.fill();
       }
 
@@ -64,7 +66,20 @@ const Visualizer: React.FC<VisualizerProps> = ({ isActive, isUserSpeaking, isMod
 
     render();
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isActive, isUserSpeaking, isModelSpeaking, theme]);
+  }, [isActive, isUserSpeaking, isModelSpeaking, theme, size]);
+
+  if (size === 'sm') {
+    return (
+      <div className="flex items-center justify-center h-8 w-24">
+        <canvas 
+          ref={canvasRef} 
+          width={100} 
+          height={32} 
+          className="w-full h-full"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-50 dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-2xl p-5 shadow-sm flex items-center justify-center h-32">

@@ -389,10 +389,10 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="w-full max-w-7xl flex-1 flex flex-col md:flex-row gap-6 h-[calc(100vh-140px)]">
-        {/* Controls Column */}
-        <div className="w-full md:w-72 flex flex-col gap-4">
-          <div className="bg-slate-50 dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-2xl p-5 shadow-sm space-y-5">
+      <main className="w-full max-w-7xl flex-1 flex flex-col md:flex-row gap-4 md:gap-6 h-[calc(100vh-140px)] overflow-hidden">
+        {/* Controls Column (Desktop) / Top Settings (Mobile) */}
+        <div className="w-full md:w-72 flex flex-col gap-4 shrink-0">
+          <div className="bg-slate-50 dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-2xl p-4 md:p-5 shadow-sm space-y-4 md:space-y-5">
             {/* Translation Toggle */}
             <div className="flex items-center justify-between">
               <div>
@@ -409,11 +409,11 @@ const App: React.FC = () => {
             </div>
 
             <div className={`${!isTranslationEnabled ? 'opacity-30 grayscale pointer-events-none' : 'opacity-100'} transition-all duration-300`}>
-              <label className="block text-[10px] font-black text-slate-400 dark:text-white/30 uppercase mb-3 tracking-[0.2em]">Translation Target</label>
+              <label className="block text-[10px] font-black text-slate-400 dark:text-white/30 uppercase mb-2 md:mb-3 tracking-[0.2em]">Translation Target</label>
               <button 
                 disabled={!isTranslationEnabled || sessionState.isActive}
                 onClick={openDrawer}
-                className="w-full flex items-center justify-between bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-3 text-sm font-bold text-slate-700 dark:text-white hover:border-banana/50 transition-all disabled:opacity-50"
+                className="w-full flex items-center justify-between bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-2.5 md:p-3 text-sm font-bold text-slate-700 dark:text-white hover:border-banana/50 transition-all disabled:opacity-50"
               >
                 <span className="flex items-center gap-3">
                   <span className="text-xl">{targetLanguage.flag}</span>
@@ -424,14 +424,17 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <Visualizer 
-            isActive={sessionState.isActive}
-            isUserSpeaking={isUserSpeaking}
-            isModelSpeaking={isModelSpeaking}
-            theme={theme}
-          />
+          <div className="hidden md:block flex-1">
+            <Visualizer 
+              isActive={sessionState.isActive}
+              isUserSpeaking={isUserSpeaking}
+              isModelSpeaking={isModelSpeaking}
+              theme={theme}
+            />
+          </div>
 
-          <div className="mt-auto space-y-3">
+          {/* Desktop Action Buttons */}
+          <div className="hidden md:block mt-auto space-y-3">
             {!sessionState.isActive ? (
               <button 
                 onClick={startSession}
@@ -466,24 +469,35 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Transcript Feed Column */}
-        <div className="flex-1 bg-slate-50 dark:bg-surface-dark rounded-3xl border border-black/5 dark:border-white/5 flex flex-col overflow-hidden shadow-2xl relative">
-          <div className="px-6 py-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/80 dark:bg-surface-dark/80 backdrop-blur-xl">
+        {/* Transcript Feed Column - Main Focus on Mobile */}
+        <div className="flex-1 bg-slate-50 dark:bg-surface-dark rounded-3xl border border-black/5 dark:border-white/5 flex flex-col min-h-0 overflow-hidden shadow-2xl relative">
+          <div className="px-6 py-3 md:py-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/80 dark:bg-surface-dark/80 backdrop-blur-xl shrink-0">
             <h2 className="text-[10px] font-black text-slate-400 dark:text-white/40 uppercase tracking-[0.4em]">Transcript Feed</h2>
-            <button onClick={() => setTranscripts([])} className="text-[9px] font-black text-slate-300 dark:text-white/20 hover:text-red-500 uppercase tracking-widest transition-colors">Clear</button>
+            <div className="flex items-center gap-4">
+              <div className="md:hidden">
+                <Visualizer 
+                  isActive={sessionState.isActive}
+                  isUserSpeaking={isUserSpeaking}
+                  isModelSpeaking={isModelSpeaking}
+                  theme={theme}
+                  size="sm"
+                />
+              </div>
+              <button onClick={() => setTranscripts([])} className="text-[9px] font-black text-slate-300 dark:text-white/20 hover:text-red-500 uppercase tracking-widest transition-colors">Clear</button>
+            </div>
           </div>
           <TranscriptionList transcripts={transcripts} />
           
           {/* Keyboard Input Bar */}
-          <div className="p-4 border-t border-black/5 dark:border-white/5 bg-white/50 dark:bg-surface-dark/50 backdrop-blur-xl">
+          <div className="p-3 md:p-4 border-t border-black/5 dark:border-white/5 bg-white/50 dark:bg-surface-dark/50 backdrop-blur-xl shrink-0">
             <form onSubmit={handleTextSubmit} className="relative flex items-center gap-2">
               <input 
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={isTranslationEnabled ? `Type text to translate to ${targetLanguage.name}...` : "Type a message..."}
+                placeholder={isTranslationEnabled ? `Translate to ${targetLanguage.name}...` : "Type a message..."}
                 disabled={!sessionState.isActive}
-                className="w-full bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-4 pr-12 text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-banana/50 focus:border-banana outline-none transition-all disabled:opacity-50 placeholder:text-slate-400 dark:placeholder:text-white/20"
+                className="w-full bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-3.5 md:p-4 pr-12 text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-banana/50 focus:border-banana outline-none transition-all disabled:opacity-50 placeholder:text-slate-400 dark:placeholder:text-white/20"
               />
               <button 
                 type="submit"
@@ -496,6 +510,41 @@ const App: React.FC = () => {
               </button>
             </form>
           </div>
+        </div>
+
+        {/* Mobile Action Buttons - Sticky at bottom */}
+        <div className="md:hidden pt-2 pb-4 shrink-0">
+          {!sessionState.isActive ? (
+            <button 
+              onClick={startSession}
+              className="w-full py-4 bg-banana hover:bg-[#EED125] active:scale-[0.98] transition-all rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-banana/10 text-black"
+            >
+              Start Live Transcribe
+            </button>
+          ) : (
+            <div className="flex gap-3">
+              <button 
+                onClick={togglePause}
+                className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border-2 transition-all flex items-center justify-center gap-2 ${
+                  sessionState.isPaused 
+                    ? 'bg-banana border-banana text-black shadow-lg shadow-banana/20' 
+                    : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-700 dark:text-white'
+                }`}
+              >
+                {sessionState.isPaused ? (
+                  <><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Resume</>
+                ) : (
+                  <><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> Pause</>
+                )}
+              </button>
+              <button 
+                onClick={stopSession}
+                className="flex-1 py-4 bg-white dark:bg-white/5 border border-red-500/20 text-red-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500/5 transition-all"
+              >
+                End Session
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
