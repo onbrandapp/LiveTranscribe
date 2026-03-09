@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
-import { Speaker, TranscriptEntry, LiveSessionState, SUPPORTED_LANGUAGES, Language, UserRole } from './types';
+import { Speaker, TranscriptEntry, LiveSessionState, SUPPORTED_LANGUAGES, Language, UserRole, Voice, AVAILABLE_VOICES } from './types';
 import { decode, decodeAudioData, createPcmBlob } from './services/audio-helpers';
 import TranscriptionList from './components/TranscriptionList';
 import Visualizer from './components/Visualizer';
@@ -26,6 +26,7 @@ const App: React.FC = () => {
 
   const [isTranslationEnabled, setIsTranslationEnabled] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState<Language>(SUPPORTED_LANGUAGES[0]); // English default
+  const [selectedVoice, setSelectedVoice] = useState<Voice>(AVAILABLE_VOICES[0]); // Zephyr default
   const [userRole, setUserRole] = useState<UserRole>(UserRole.ADMIN);
   const [isDrawerRendered, setIsDrawerRendered] = useState(false);
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
@@ -260,7 +261,7 @@ const App: React.FC = () => {
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } },
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice.id } },
           },
           inputAudioTranscription: {},
           outputAudioTranscription: {},
@@ -484,6 +485,45 @@ const App: React.FC = () => {
                 </span>
                 {!sessionState.isActive && isTranslationEnabled && isAdmin && <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>}
               </button>
+            </div>
+
+            {/* Voice Selection */}
+            <div className="space-y-3">
+              <label className="block text-[10px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.2em]">Gemini Voice</label>
+              <div className="grid grid-cols-1 gap-2">
+                {AVAILABLE_VOICES.map(voice => (
+                  <button
+                    key={voice.id}
+                    disabled={sessionState.isActive || !isAdmin}
+                    onClick={() => setSelectedVoice(voice)}
+                    className={`w-full flex flex-col items-start p-3 rounded-xl border transition-all ${
+                      selectedVoice.id === voice.id 
+                        ? 'bg-banana/10 border-banana text-slate-900 dark:text-white' 
+                        : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-500 dark:text-white/40 hover:border-banana/30'
+                    } ${sessionState.isActive || !isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="text-xs font-black uppercase tracking-widest">{voice.name}</span>
+                      {selectedVoice.id === voice.id && <div className="w-2 h-2 rounded-full bg-banana animate-pulse"></div>}
+                    </div>
+                    <span className="text-[10px] opacity-60">{voice.description}</span>
+                  </button>
+                ))}
+                
+                {/* Custom Voice Placeholder */}
+                <div className="relative group">
+                  <button
+                    disabled={true}
+                    className="w-full flex flex-col items-start p-3 rounded-xl border border-dashed border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 opacity-40 cursor-not-allowed"
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="text-xs font-black uppercase tracking-widest">Custom Voice</span>
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    </div>
+                    <span className="text-[10px]">Upload sample (Coming Soon)</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

@@ -30,6 +30,20 @@ export interface Language {
   flag: string;
 }
 
+export interface Voice {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export const AVAILABLE_VOICES: Voice[] = [
+  { id: 'Zephyr', name: 'Zephyr', description: 'Clear and professional' },
+  { id: 'Puck', name: 'Puck', description: 'Energetic and bright' },
+  { id: 'Charon', name: 'Charon', description: 'Deep and calm' },
+  { id: 'Kore', name: 'Kore', description: 'Soft and gentle' },
+  { id: 'Fenrir', name: 'Fenrir', description: 'Strong and steady' },
+];
+
 export const SUPPORTED_LANGUAGES: Language[] = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
   { code: 'es', name: 'Spanish', flag: '🇪🇸' },
