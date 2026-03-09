@@ -4,6 +4,11 @@ export enum Speaker {
   MODEL = 'MODEL'
 }
 
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  USER = 'USER'
+}
+
 export interface TranscriptEntry {
   id: string;
   speaker: Speaker;
