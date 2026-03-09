@@ -211,6 +211,8 @@ const App: React.FC = () => {
         : `You are a helpful and concise AI conversationalist. 
            - Respond naturally and briefly to the user's speech or text input.
            - Ensure all transcriptions include proper punctuation and capitalization.
+           - If multiple people are speaking in the user's audio, you MUST distinguish them by prefixing their speech with 'Speaker A:', 'Speaker B:', etc. in the transcription.
+           - DO NOT repeat what the user said in your own response unless specifically asked.
            - Your primary goal is to provide useful information while being transcribed in real-time.`;
 
       const sessionPromise = ai.live.connect({

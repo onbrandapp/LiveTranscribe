@@ -48,31 +48,57 @@ const TranscriptionList: React.FC<TranscriptionListProps> = ({ transcripts }) =>
         // 4. Default User (no label) is on the right.
         const isLeft = isModel || (speakerLabel && !speakerLabel.endsWith('A'));
 
+        // Speaker-specific color logic
+        const getSpeakerColor = (label: string | null) => {
+          if (isModel) return 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white';
+          
+          if (!label || label.endsWith('A')) {
+            return `bg-banana text-black border-banana ${isActive ? 'bubble-active-user animate-glow-pulse' : 'opacity-95'}`;
+          }
+
+          // Assign colors to Speaker B, C, D...
+          const colors = [
+            'bg-indigo-500 text-white border-indigo-400',
+            'bg-emerald-500 text-white border-emerald-400',
+            'bg-rose-500 text-white border-rose-400',
+            'bg-amber-500 text-white border-amber-400',
+            'bg-violet-500 text-white border-violet-400',
+          ];
+          
+          const charCode = label.charCodeAt(label.length - 1);
+          const colorIndex = (charCode - 65) % colors.length; // 65 is 'A'
+          return `${colors[colorIndex]} ${isActive ? 'animate-glow-pulse' : 'opacity-90'}`;
+        };
+
+        const bubbleClasses = getSpeakerColor(speakerLabel);
+
         return (
           <div 
             key={entry.id}
             className={`flex flex-col transition-all duration-500 ${isLeft ? 'items-start' : 'items-end'} ${isActive ? 'scale-[1.005]' : 'scale-100'}`}
           >
             <div className={`max-w-[85%] rounded-2xl px-5 py-3 text-sm shadow-xl transition-all duration-300 border relative ${
-              !isLeft 
-                ? `bg-banana text-black border-banana rounded-tr-none ${isActive ? 'bubble-active-user animate-glow-pulse' : 'opacity-95'}` 
-                : isModel
-                  ? `bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-tl-none ${isActive ? 'bubble-active-model border-slate-300 dark:border-white/20 animate-glow-pulse' : 'opacity-70'}`
-                  : `bg-slate-100 dark:bg-white/10 border-slate-200 dark:border-white/10 text-slate-800 dark:text-white/90 rounded-tl-none ${isActive ? 'bubble-active-model animate-glow-pulse' : 'opacity-85'}`
+              !isLeft && (!speakerLabel || speakerLabel.endsWith('A'))
+                ? bubbleClasses + ' rounded-tr-none'
+                : bubbleClasses + ' rounded-tl-none'
             }`}>
               {/* Activity indicator dot for active speaker */}
               {isActive && (
                 <div className={`absolute -top-1.5 ${!isLeft ? '-left-1.5' : '-right-1.5'} flex items-center justify-center`}>
                   <span className={`flex h-3 w-3 relative`}>
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isLeft ? 'bg-black' : 'bg-banana'}`}></span>
-                    <span className={`relative inline-flex rounded-full h-3 w-3 ${!isLeft ? 'bg-black' : 'bg-banana'}`}></span>
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${!isLeft ? 'bg-black' : 'bg-white'}`}></span>
+                    <span className={`relative inline-flex rounded-full h-3 w-3 ${!isLeft ? 'bg-black' : 'bg-white'}`}></span>
                   </span>
                 </div>
               )}
 
               <div className="space-y-2">
                 {speakerLabel && (
-                  <span className={`text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md mb-1 inline-block ${!isLeft ? 'bg-black/10 text-black/60' : 'bg-banana/20 text-banana-600 dark:text-banana'}`}>
+                  <span className={`text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md mb-1 inline-block ${
+                    !isLeft && speakerLabel.endsWith('A') 
+                      ? 'bg-black/10 text-black/60' 
+                      : 'bg-white/20 text-white'
+                  }`}>
                     {speakerLabel}
                   </span>
                 )}
