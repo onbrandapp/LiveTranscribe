@@ -24,12 +24,53 @@ const App: React.FC = () => {
     error: null,
   });
 
-  const [isTranslationEnabled, setIsTranslationEnabled] = useState(false);
-  const [targetLanguage, setTargetLanguage] = useState<Language>(SUPPORTED_LANGUAGES[0]); // English default
-  const [selectedVoice, setSelectedVoice] = useState<Voice>(AVAILABLE_VOICES[0]); // Zephyr default
+  const [isTranslationEnabled, setIsTranslationEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('gemini_translation_enabled') === 'true';
+    }
+    return false;
+  });
+
+  const [targetLanguage, setTargetLanguage] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gemini_target_language');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return SUPPORTED_LANGUAGES.find(l => l.code === parsed.code) || SUPPORTED_LANGUAGES[0];
+        } catch (e) { return SUPPORTED_LANGUAGES[0]; }
+      }
+    }
+    return SUPPORTED_LANGUAGES[0];
+  });
+
+  const [selectedVoice, setSelectedVoice] = useState<Voice>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gemini_selected_voice');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return AVAILABLE_VOICES.find(v => v.id === parsed.id) || AVAILABLE_VOICES[0];
+        } catch (e) { return AVAILABLE_VOICES[0]; }
+      }
+    }
+    return AVAILABLE_VOICES[0];
+  });
+
   const [isDrawerRendered, setIsDrawerRendered] = useState(false);
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
-  const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
+
+  const [transcripts, setTranscripts] = useState<TranscriptEntry[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gemini_transcripts');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) { return []; }
+      }
+    }
+    return [];
+  });
   const [inputText, setInputText] = useState('');
   
   const [apiKey, setApiKey] = useState<string>(() => {
@@ -68,6 +109,23 @@ const App: React.FC = () => {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Session Persistence
+  useEffect(() => {
+    localStorage.setItem('gemini_transcripts', JSON.stringify(transcripts));
+  }, [transcripts]);
+
+  useEffect(() => {
+    localStorage.setItem('gemini_translation_enabled', String(isTranslationEnabled));
+  }, [isTranslationEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('gemini_target_language', JSON.stringify(targetLanguage));
+  }, [targetLanguage]);
+
+  useEffect(() => {
+    localStorage.setItem('gemini_selected_voice', JSON.stringify(selectedVoice));
+  }, [selectedVoice]);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
