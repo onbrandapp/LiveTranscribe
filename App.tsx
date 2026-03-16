@@ -512,58 +512,58 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center p-4 transition-colors duration-500 bg-white dark:bg-matte selection:bg-banana selection:text-black">
       {showTour && <OnboardingTour onComplete={handleTourComplete} />}
-      <header className="w-full max-w-7xl flex items-center justify-between mb-4 border-b border-black/5 dark:border-white/5 pb-4">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-banana rounded-xl flex items-center justify-center shadow-lg shadow-banana/20">
-            <svg className="w-6 h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <header className="w-full max-w-7xl flex items-center justify-between mb-4 border-b border-black/5 dark:border-white/5 pb-4 px-1">
+        <div className="flex items-center gap-2 md:gap-4">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-banana rounded-lg md:rounded-xl flex items-center justify-center shadow-lg shadow-banana/20 shrink-0">
+            <svg className="w-5 h-5 md:w-6 md:h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
           </div>
-          <div>
-            <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic">
+          <div className="min-w-0">
+            <h1 className="text-base md:text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic truncate">
               Gemini Live <span className="text-banana">Transcribe</span>
             </h1>
-            <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${sessionState.isActive ? 'bg-banana animate-pulse' : 'bg-slate-200 dark:bg-white/10'}`}></span>
-              <span className="text-[10px] font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${sessionState.isActive ? 'bg-banana animate-pulse' : 'bg-slate-200 dark:bg-white/10'}`}></span>
+              <span className="text-[8px] md:text-[10px] font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">
                 {sessionState.isActive ? (sessionState.isPaused ? 'Paused' : 'Active') : 'Disconnected'}
               </span>
             </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
           <button 
             id="api-key-btn"
             onClick={() => {
               setTempKey(apiKey);
               setIsKeyModalOpen(true);
             }}
-            className="p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center gap-2"
+            className="p-2 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center gap-2"
             title="API Settings"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
-            <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Key</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest hidden lg:inline">Key</span>
           </button>
           <button 
             onClick={() => setShowTour(true)}
-            className="p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+            className="p-2 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
             title="Show Tour"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </button>
           <button 
             onClick={toggleTheme}
-            className="p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+            className="p-2 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
           >
             {theme === 'dark' ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
             ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
             )}
           </button>
         </div>

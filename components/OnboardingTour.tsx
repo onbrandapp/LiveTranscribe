@@ -95,11 +95,15 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
 
       {/* Tooltip Card */}
       <div 
-        className={`relative w-full max-w-sm bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-[2rem] shadow-2xl p-8 pointer-events-auto transition-all duration-500 ${targetRect ? 'mt-48 md:mt-0' : ''}`}
+        className={`relative w-[calc(100%-40px)] md:w-full max-w-sm bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-[2rem] shadow-2xl p-6 md:p-8 pointer-events-auto transition-all duration-500 ${targetRect ? 'mt-48 md:mt-0' : ''}`}
         style={targetRect ? {
           position: 'absolute',
-          top: targetRect.bottom + 24 > window.innerHeight - 300 ? targetRect.top - 320 : targetRect.bottom + 24,
-          left: Math.max(20, Math.min(window.innerWidth - 380, targetRect.left + targetRect.width / 2 - 192))
+          top: window.innerWidth < 768 
+            ? (targetRect.bottom + 240 > window.innerHeight ? targetRect.top - 280 : targetRect.bottom + 24)
+            : (targetRect.bottom + 24 > window.innerHeight - 300 ? targetRect.top - 320 : targetRect.bottom + 24),
+          left: window.innerWidth < 768 
+            ? 20 
+            : Math.max(20, Math.min(window.innerWidth - 380, targetRect.left + targetRect.width / 2 - 192))
         } : {}}
       >
         <div className="flex items-center justify-between mb-4">
@@ -107,21 +111,21 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
           <button onClick={handleSkip} className="text-[10px] font-bold text-slate-400 dark:text-white/20 uppercase tracking-widest hover:text-red-500 transition-colors">Skip</button>
         </div>
         
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-3">{steps[currentStep].title}</h3>
-        <p className="text-sm text-slate-500 dark:text-white/60 leading-relaxed mb-8">{steps[currentStep].content}</p>
+        <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2 md:mb-3">{steps[currentStep].title}</h3>
+        <p className="text-xs md:text-sm text-slate-500 dark:text-white/60 leading-relaxed mb-6 md:mb-8">{steps[currentStep].content}</p>
         
         <div className="flex gap-3">
           {currentStep > 0 && (
             <button 
               onClick={() => setCurrentStep(prev => prev - 1)}
-              className="flex-1 py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/50 rounded-xl font-bold text-xs tracking-tight hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+              className="flex-1 py-2.5 md:py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/50 rounded-xl font-bold text-xs tracking-tight hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
             >
               Back
             </button>
           )}
           <button 
             onClick={handleNext}
-            className="flex-[2] py-3 bg-banana hover:bg-[#EED125] text-black rounded-xl font-bold text-xs tracking-tight shadow-lg shadow-banana/10 transition-all"
+            className="flex-[2] py-2.5 md:py-3 bg-banana hover:bg-[#EED125] text-black rounded-xl font-bold text-xs tracking-tight shadow-lg shadow-banana/10 transition-all"
           >
             {currentStep === steps.length - 1 ? 'Finish Tour' : 'Next Step'}
           </button>
