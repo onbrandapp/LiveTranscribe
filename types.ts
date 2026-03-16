@@ -29,6 +29,8 @@ export interface Voice {
   id: string;
   name: string;
   description: string;
+  isCustom?: boolean;
+  sampleUrl?: string;
 }
 
 export const AVAILABLE_VOICES: Voice[] = [

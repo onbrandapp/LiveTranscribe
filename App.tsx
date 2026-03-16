@@ -5,6 +5,7 @@ import { Speaker, TranscriptEntry, LiveSessionState, SUPPORTED_LANGUAGES, Langua
 import { decode, decodeAudioData, createPcmBlob } from './services/audio-helpers';
 import TranscriptionList from './components/TranscriptionList';
 import Visualizer from './components/Visualizer';
+import OnboardingTour from './components/OnboardingTour';
 
 const MODEL_NAME = 'gemini-2.5-flash-native-audio-preview-12-2025';
 
@@ -44,13 +45,35 @@ const App: React.FC = () => {
     return SUPPORTED_LANGUAGES[0];
   });
 
+  const [customVoices, setCustomVoices] = useState<Voice[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gemini_custom_voices');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) { return []; }
+      }
+    }
+    return [];
+  });
+
   const [selectedVoice, setSelectedVoice] = useState<Voice>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('gemini_selected_voice');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          return AVAILABLE_VOICES.find(v => v.id === parsed.id) || AVAILABLE_VOICES[0];
+          // Check prebuilt first
+          const prebuilt = AVAILABLE_VOICES.find(v => v.id === parsed.id);
+          if (prebuilt) return prebuilt;
+          
+          // Check custom voices (need to wait for customVoices state but we can try to parse from local storage again here or use the parsed object if it has the data)
+          const savedCustom = localStorage.getItem('gemini_custom_voices');
+          if (savedCustom) {
+            const customList = JSON.parse(savedCustom);
+            const custom = customList.find((v: Voice) => v.id === parsed.id);
+            if (custom) return custom;
+          }
         } catch (e) { return AVAILABLE_VOICES[0]; }
       }
     }
@@ -85,6 +108,13 @@ const App: React.FC = () => {
   
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isModelSpeaking, setIsModelSpeaking] = useState(false);
+
+  const [showTour, setShowTour] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('gemini_tour_completed') !== 'true';
+    }
+    return false;
+  });
 
   const inputAudioContextRef = useRef<AudioContext | null>(null);
   const outputAudioContextRef = useRef<AudioContext | null>(null);
@@ -126,6 +156,43 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('gemini_selected_voice', JSON.stringify(selectedVoice));
   }, [selectedVoice]);
+
+  useEffect(() => {
+    localStorage.setItem('gemini_custom_voices', JSON.stringify(customVoices));
+  }, [customVoices]);
+
+  const handleVoiceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('audio/')) {
+      setSessionState(s => ({ ...s, error: 'Please upload an audio file.' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      const newVoice: Voice = {
+        id: `custom-${Date.now()}`,
+        name: file.name.split('.')[0],
+        description: 'Custom uploaded voice sample',
+        isCustom: true,
+        sampleUrl: base64
+      };
+      setCustomVoices(prev => [...prev, newVoice]);
+      setSelectedVoice(newVoice);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeCustomVoice = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCustomVoices(prev => prev.filter(v => v.id !== id));
+    if (selectedVoice.id === id) {
+      setSelectedVoice(AVAILABLE_VOICES[0]);
+    }
+  };
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
@@ -294,7 +361,7 @@ const App: React.FC = () => {
       });
       micStreamRef.current = stream;
 
-      const systemInstruction = isTranslationEnabled 
+      const systemInstruction = (isTranslationEnabled 
         ? `You are a high-fidelity real-time audio translator. 
            Your ONLY job is to translate the user's speech or text input into ${targetLanguage.name}.
            - Provide ONLY the translation in your audio output.
@@ -305,14 +372,15 @@ const App: React.FC = () => {
            - Ensure all transcriptions include proper punctuation and capitalization.
            - If multiple people are speaking in the user's audio, you MUST distinguish them by prefixing their speech with 'Speaker A:', 'Speaker B:', etc. in the transcription.
            - DO NOT repeat what the user said in your own response unless specifically asked.
-           - Your primary goal is to provide useful information while being transcribed in real-time.`;
+           - Your primary goal is to provide useful information while being transcribed in real-time.`) + 
+        (selectedVoice.isCustom ? `\n\nNOTE: The user has provided a custom voice sample named "${selectedVoice.name}". While you are currently outputting audio using a prebuilt voice, please attempt to match the tone, cadence, and personality implied by this custom reference.` : '');
 
       const sessionPromise = ai.live.connect({
         model: MODEL_NAME,
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice.id } },
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice.isCustom ? 'Zephyr' : selectedVoice.id } },
           },
           inputAudioTranscription: {},
           outputAudioTranscription: {},
@@ -436,8 +504,14 @@ const App: React.FC = () => {
     });
   };
 
+  const handleTourComplete = () => {
+    setShowTour(false);
+    localStorage.setItem('gemini_tour_completed', 'true');
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center p-4 transition-colors duration-500 bg-white dark:bg-matte selection:bg-banana selection:text-black">
+      {showTour && <OnboardingTour onComplete={handleTourComplete} />}
       <header className="w-full max-w-7xl flex items-center justify-between mb-4 border-b border-black/5 dark:border-white/5 pb-4">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 bg-banana rounded-xl flex items-center justify-center shadow-lg shadow-banana/20">
@@ -460,6 +534,7 @@ const App: React.FC = () => {
         
         <div className="flex items-center gap-3">
           <button 
+            id="api-key-btn"
             onClick={() => {
               setTempKey(apiKey);
               setIsKeyModalOpen(true);
@@ -471,6 +546,15 @@ const App: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
             <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Key</span>
+          </button>
+          <button 
+            onClick={() => setShowTour(true)}
+            className="p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+            title="Show Tour"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </button>
           <button 
             onClick={toggleTheme}
@@ -496,6 +580,7 @@ const App: React.FC = () => {
                 <p className="text-[10px] text-slate-400 dark:text-white/20">Beta Feature</p>
               </div>
               <button 
+                id="translation-toggle"
                 onClick={() => setIsTranslationEnabled(!isTranslationEnabled)}
                 disabled={sessionState.isActive}
                 className={`w-10 h-6 rounded-full transition-all relative ${isTranslationEnabled ? 'bg-banana' : 'bg-slate-200 dark:bg-white/10'} ${sessionState.isActive ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -520,42 +605,98 @@ const App: React.FC = () => {
             </div>
 
             {/* Voice Selection */}
-            <div className="space-y-3">
-              <label className="block text-[10px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.2em]">Gemini Voice</label>
-              <div className="grid grid-cols-1 gap-2">
-                {AVAILABLE_VOICES.map(voice => (
-                  <button
-                    key={voice.id}
+            <div id="voice-selection" className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-[10px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.2em]">Gemini Voice</label>
+                <div className="relative">
+                  <input 
+                    type="file" 
+                    id="voice-upload" 
+                    className="hidden" 
+                    accept="audio/*"
+                    onChange={handleVoiceUpload}
                     disabled={sessionState.isActive}
-                    onClick={() => setSelectedVoice(voice)}
-                    className={`w-full flex flex-col items-start p-3 rounded-xl border transition-all ${
-                      selectedVoice.id === voice.id 
-                        ? 'bg-banana/10 border-banana text-slate-900 dark:text-white' 
-                        : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-500 dark:text-white/40 hover:border-banana/30'
-                    } ${sessionState.isActive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  />
+                  <label 
+                    htmlFor="voice-upload"
+                    className={`flex items-center gap-1.5 text-[9px] font-black text-banana uppercase tracking-widest cursor-pointer hover:opacity-80 transition-opacity ${sessionState.isActive ? 'opacity-30 cursor-not-allowed' : ''}`}
                   >
-                    <div className="flex items-center justify-between w-full mb-1">
-                      <span className="text-xs font-black uppercase tracking-widest">{voice.name}</span>
-                      {selectedVoice.id === voice.id && <div className="w-2 h-2 rounded-full bg-banana animate-pulse"></div>}
-                    </div>
-                    <span className="text-[10px] opacity-60">{voice.description}</span>
-                  </button>
-                ))}
-                
-                {/* Custom Voice Placeholder */}
-                <div className="relative group">
-                  <button
-                    disabled={true}
-                    className="w-full flex flex-col items-start p-3 rounded-xl border border-dashed border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 opacity-40 cursor-not-allowed"
-                  >
-                    <div className="flex items-center justify-between w-full mb-1">
-                      <span className="text-xs font-black uppercase tracking-widest">Custom Voice</span>
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                    </div>
-                    <span className="text-[10px]">Upload sample (Coming Soon)</span>
-                  </button>
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                    Upload
+                  </label>
                 </div>
               </div>
+              <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+                {/* Prebuilt Voices */}
+                <div className="space-y-2">
+                  <p className="text-[8px] font-bold text-slate-400 dark:text-white/20 uppercase tracking-widest">Prebuilt</p>
+                  {AVAILABLE_VOICES.map(voice => (
+                    <button
+                      key={voice.id}
+                      disabled={sessionState.isActive}
+                      onClick={() => setSelectedVoice(voice)}
+                      className={`w-full flex flex-col items-start p-3 rounded-xl border transition-all ${
+                        selectedVoice.id === voice.id 
+                          ? 'bg-banana/10 border-banana text-slate-900 dark:text-white' 
+                          : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-500 dark:text-white/40 hover:border-banana/30'
+                      } ${sessionState.isActive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <span className="text-xs font-black uppercase tracking-widest">{voice.name}</span>
+                        {selectedVoice.id === voice.id && <div className="w-2 h-2 rounded-full bg-banana animate-pulse"></div>}
+                      </div>
+                      <span className="text-[10px] opacity-60">{voice.description}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Voices */}
+                {customVoices.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-[8px] font-bold text-slate-400 dark:text-white/20 uppercase tracking-widest">Custom</p>
+                    {customVoices.map(voice => (
+                      <button
+                        key={voice.id}
+                        disabled={sessionState.isActive}
+                        onClick={() => setSelectedVoice(voice)}
+                        className={`w-full flex flex-col items-start p-3 rounded-xl border transition-all relative group ${
+                          selectedVoice.id === voice.id 
+                            ? 'bg-banana/10 border-banana text-slate-900 dark:text-white' 
+                            : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-500 dark:text-white/40 hover:border-banana/30'
+                        } ${sessionState.isActive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="flex items-center justify-between w-full mb-1">
+                          <span className="text-xs font-black uppercase tracking-widest truncate max-w-[120px]">{voice.name}</span>
+                          <div className="flex items-center gap-2">
+                            {selectedVoice.id === voice.id && <div className="w-2 h-2 rounded-full bg-banana animate-pulse"></div>}
+                            <button 
+                              onClick={(e) => removeCustomVoice(voice.id, e)}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-all"
+                            >
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                          </div>
+                        </div>
+                        <span className="text-[10px] opacity-60">Custom Voice Sample</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {customVoices.length === 0 && (
+                  <div className="p-4 border border-dashed border-black/10 dark:border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 opacity-40">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                    <span className="text-[9px] font-bold uppercase tracking-widest">No Custom Voices</span>
+                  </div>
+                )}
+              </div>
+              {selectedVoice.isCustom && (
+                <div className="p-3 bg-banana/5 border border-banana/20 rounded-xl">
+                  <p className="text-[9px] text-banana font-bold leading-tight uppercase tracking-widest">
+                    Note: Custom voices are used as reference for the AI's tone. Gemini Live currently defaults to prebuilt voices for audio output.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -572,8 +713,9 @@ const App: React.FC = () => {
           <div className="hidden md:block mt-auto space-y-3">
             {!sessionState.isActive ? (
               <button 
+                id="start-session-btn"
                 onClick={startSession}
-                className="w-full py-4 bg-banana hover:bg-[#EED125] active:scale-[0.98] transition-all rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-banana/10 text-black"
+                className="w-full py-4 bg-banana hover:bg-[#EED125] active:scale-[0.98] transition-all rounded-2xl font-bold text-sm tracking-tight shadow-xl shadow-banana/10 text-black"
               >
                 Start Live Transcribe
               </button>
@@ -581,7 +723,7 @@ const App: React.FC = () => {
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={togglePause}
-                  className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 transition-all flex items-center justify-center gap-3 ${
+                  className={`w-full py-4 rounded-2xl font-bold text-sm tracking-tight border-2 transition-all flex items-center justify-center gap-3 ${
                     sessionState.isPaused 
                       ? 'bg-banana border-banana text-black shadow-lg shadow-banana/20' 
                       : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-700 dark:text-white'
@@ -595,7 +737,7 @@ const App: React.FC = () => {
                 </button>
                 <button 
                   onClick={stopSession}
-                  className="w-full py-4 bg-white dark:bg-white/5 border border-red-500/20 text-red-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-500/5 transition-all"
+                  className="w-full py-4 bg-white dark:bg-white/5 border border-red-500/20 text-red-500 rounded-2xl font-bold text-sm tracking-tight hover:bg-red-500/5 transition-all"
                 >
                   End Session
                 </button>
@@ -606,9 +748,9 @@ const App: React.FC = () => {
 
         {/* Transcript Feed Column - Main Focus on Mobile */}
         <div className="flex-1 bg-slate-50 dark:bg-surface-dark rounded-3xl border border-black/5 dark:border-white/5 flex flex-col min-h-0 overflow-hidden shadow-2xl relative">
-          <div className="px-6 py-3 md:py-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/80 dark:bg-surface-dark/80 backdrop-blur-xl shrink-0">
-            <h2 className="text-[10px] font-black text-slate-400 dark:text-white/40 uppercase tracking-[0.4em]">Transcript Feed</h2>
-            <div className="flex items-center gap-4">
+          <div className="px-4 md:px-6 py-3 md:py-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/80 dark:bg-surface-dark/80 backdrop-blur-xl shrink-0">
+            <h2 className="text-[10px] font-black text-slate-400 dark:text-white/40 uppercase tracking-widest md:tracking-[0.4em] truncate mr-2">Transcript Feed</h2>
+            <div className="flex items-center gap-2 md:gap-4 shrink-0">
               <div className="md:hidden">
                 <Visualizer 
                   isActive={sessionState.isActive}
@@ -621,13 +763,14 @@ const App: React.FC = () => {
               <button 
                 onClick={exportTranscript}
                 disabled={transcripts.length === 0}
-                className="text-[9px] font-black text-slate-300 dark:text-white/20 hover:text-banana uppercase tracking-widest transition-colors disabled:opacity-0"
+                className="text-[9px] font-black text-slate-500 dark:text-white/40 hover:text-banana uppercase tracking-widest transition-colors disabled:opacity-20 shrink-0"
               >
                 Export
               </button>
               <button 
                 onClick={() => setTranscripts([])} 
-                className="text-[9px] font-black text-slate-300 dark:text-white/20 hover:text-red-500 uppercase tracking-widest transition-colors"
+                disabled={transcripts.length === 0}
+                className="text-[9px] font-black text-slate-500 dark:text-white/40 hover:text-red-500 uppercase tracking-widest transition-colors disabled:opacity-20 shrink-0"
               >
                 Clear
               </button>
@@ -664,7 +807,7 @@ const App: React.FC = () => {
           {!sessionState.isActive ? (
             <button 
               onClick={startSession}
-              className="w-full py-4 bg-banana hover:bg-[#EED125] active:scale-[0.98] transition-all rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-banana/10 text-black"
+              className="w-full py-4 bg-banana hover:bg-[#EED125] active:scale-[0.98] transition-all rounded-2xl font-bold text-sm tracking-tight shadow-xl shadow-banana/10 text-black"
             >
               Start Live Transcribe
             </button>
@@ -672,7 +815,7 @@ const App: React.FC = () => {
             <div className="flex gap-3">
               <button 
                 onClick={togglePause}
-                className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border-2 transition-all flex items-center justify-center gap-2 ${
+                className={`flex-1 py-4 rounded-2xl font-bold text-xs tracking-tight border-2 transition-all flex items-center justify-center gap-2 ${
                   sessionState.isPaused 
                     ? 'bg-banana border-banana text-black shadow-lg shadow-banana/20' 
                     : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-700 dark:text-white'
@@ -686,7 +829,7 @@ const App: React.FC = () => {
               </button>
               <button 
                 onClick={stopSession}
-                className="flex-1 py-4 bg-white dark:bg-white/5 border border-red-500/20 text-red-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500/5 transition-all"
+                className="flex-1 py-4 bg-white dark:bg-white/5 border border-red-500/20 text-red-500 rounded-2xl font-bold text-xs tracking-tight hover:bg-red-500/5 transition-all"
               >
                 End Session
               </button>
@@ -697,21 +840,48 @@ const App: React.FC = () => {
 
       {/* Language Modal */}
       {isDrawerRendered && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className={`absolute inset-0 bg-black/60 dark:bg-black/80 overlay-blur ${isDrawerClosing ? 'animate-fade-out' : 'animate-fade-in'}`} onClick={closeDrawer}></div>
-          <div className={`relative w-full max-w-lg bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-3xl shadow-2xl p-6 ${isDrawerClosing ? 'animate-slide-down' : 'animate-slide-up'}`}>
-            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-6">Select Translation Language</h3>
-            <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+          <div className={`absolute inset-0 bg-black/40 dark:bg-black/60 overlay-blur ${isDrawerClosing ? 'animate-fade-out' : 'animate-fade-in'}`} onClick={closeDrawer}></div>
+          <div className={`relative w-full max-w-lg bg-white/90 dark:bg-surface-dark/90 backdrop-blur-2xl border-t md:border border-black/5 dark:border-white/10 rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl p-6 md:p-8 ${isDrawerClosing ? 'animate-slide-down' : 'animate-slide-up'}`}>
+            {/* Handle for mobile */}
+            <div className="w-12 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-6 md:hidden"></div>
+            
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Translation Target</h3>
+              <button 
+                onClick={closeDrawer}
+                className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 max-h-[50vh] md:max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
               {SUPPORTED_LANGUAGES.map((lang) => (
                 <button
                   key={lang.code}
                   onClick={() => { setTargetLanguage(lang); closeDrawer(); }}
-                  className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                    targetLanguage.code === lang.code ? 'bg-banana border-banana text-black' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5 text-slate-500 dark:text-white/40 hover:bg-slate-100 dark:hover:bg-white/10'
+                  className={`group flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
+                    targetLanguage.code === lang.code 
+                      ? 'bg-banana border-banana shadow-lg shadow-banana/20' 
+                      : 'bg-slate-50/50 dark:bg-white/5 border-transparent hover:border-slate-200 dark:hover:border-white/10 hover:bg-white dark:hover:bg-white/[0.08]'
                   }`}
                 >
-                  <span className="text-2xl">{lang.flag}</span>
-                  <span className="text-[11px] font-black uppercase tracking-widest">{lang.name}</span>
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <span className="text-2xl shrink-0">{lang.flag}</span>
+                    <span className={`text-xs font-bold tracking-tight truncate ${
+                      targetLanguage.code === lang.code ? 'text-black' : 'text-slate-600 dark:text-white/70'
+                    }`}>
+                      {lang.name}
+                    </span>
+                  </div>
+                  {targetLanguage.code === lang.code && (
+                    <svg className="w-4 h-4 text-black shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
                 </button>
               ))}
             </div>
@@ -724,16 +894,16 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 dark:bg-black/80 overlay-blur animate-fade-in" onClick={() => setIsKeyModalOpen(false)}></div>
           <div className="relative w-full max-w-md bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-3xl shadow-2xl p-8 animate-slide-up">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-banana rounded-2xl flex items-center justify-center shadow-lg shadow-banana/20">
-                <svg className="w-6 h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">API Settings</h3>
+              <button 
+                onClick={() => setIsKeyModalOpen(false)}
+                className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">API Settings</h3>
-                <p className="text-[10px] font-bold text-slate-400 dark:text-white/30 uppercase tracking-widest">Gemini API Configuration</p>
-              </div>
+              </button>
             </div>
             
             <div className="space-y-4">
@@ -755,13 +925,13 @@ const App: React.FC = () => {
               <div className="flex gap-3 pt-4">
                 <button 
                   onClick={() => setIsKeyModalOpen(false)}
-                  className="flex-1 py-4 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/50 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+                  className="flex-1 py-4 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/50 rounded-2xl font-bold text-xs tracking-tight hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={saveApiKey}
-                  className="flex-1 py-4 bg-banana hover:bg-[#EED125] text-black rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-banana/10 transition-all"
+                  className="flex-1 py-4 bg-banana hover:bg-[#EED125] text-black rounded-2xl font-bold text-xs tracking-tight shadow-lg shadow-banana/10 transition-all"
                 >
                   Save Key
                 </button>
