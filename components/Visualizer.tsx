@@ -76,6 +76,8 @@ const Visualizer: React.FC<VisualizerProps> = ({ isActive, isUserSpeaking, isMod
           width={100} 
           height={32} 
           className="w-full h-full"
+          role="img"
+          aria-label={isUserSpeaking ? "User is speaking" : isModelSpeaking ? "Gemini is speaking" : "Audio visualizer"}
         />
       </div>
     );
@@ -88,6 +90,8 @@ const Visualizer: React.FC<VisualizerProps> = ({ isActive, isUserSpeaking, isMod
         width={240} 
         height={80} 
         className="w-full"
+        role="img"
+        aria-label={isUserSpeaking ? "User is speaking" : isModelSpeaking ? "Gemini is speaking" : "Audio visualizer"}
       />
     </div>
   );

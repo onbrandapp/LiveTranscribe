@@ -46,6 +46,11 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
       content: 'Once you\'re ready, click here to begin your live session. Speak naturally and watch the magic happen!',
       targetId: 'start-session-btn',
     },
+    {
+      id: 'shortcuts',
+      title: 'Power User Shortcuts',
+      content: 'Use [Space] to Start/Pause, [Esc] to End Session, and [T] to toggle Translation. Efficiency at your fingertips!',
+    },
   ], []);
 
   useEffect(() => {
@@ -76,14 +81,15 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none" role="dialog" aria-modal="true" aria-labelledby="tour-title">
       {/* Dimmed Background */}
-      <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-[2px] pointer-events-auto" onClick={handleSkip}></div>
+      <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-[2px] pointer-events-auto" onClick={handleSkip} aria-hidden="true"></div>
       
       {/* Spotlight Effect */}
       {targetRect && (
         <div 
           className="absolute border-2 border-banana rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.4)] dark:shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] transition-all duration-500 ease-out-back"
+          aria-hidden="true"
           style={{
             top: targetRect.top - 8,
             left: targetRect.left - 8,
@@ -107,25 +113,27 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
         } : {}}
       >
         <div className="flex items-center justify-between mb-4">
-          <span className="text-[10px] font-black text-banana uppercase tracking-[0.3em]">Step {currentStep + 1} of {steps.length}</span>
-          <button onClick={handleSkip} className="text-[10px] font-bold text-slate-400 dark:text-white/20 uppercase tracking-widest hover:text-red-500 transition-colors">Skip</button>
+          <span className="text-[10px] font-black text-banana uppercase tracking-[0.3em]" aria-label={`Step ${currentStep + 1} of ${steps.length}`}>Step {currentStep + 1} of {steps.length}</span>
+          <button onClick={handleSkip} className="text-[10px] font-bold text-slate-400 dark:text-white/20 uppercase tracking-widest hover:text-red-500 transition-colors focus:ring-2 focus:ring-banana/50 outline-none" aria-label="Skip tour">Skip</button>
         </div>
         
-        <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2 md:mb-3">{steps[currentStep].title}</h3>
+        <h3 id="tour-title" className="text-lg md:text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2 md:mb-3">{steps[currentStep].title}</h3>
         <p className="text-xs md:text-sm text-slate-500 dark:text-white/60 leading-relaxed mb-6 md:mb-8">{steps[currentStep].content}</p>
         
         <div className="flex gap-3">
           {currentStep > 0 && (
             <button 
               onClick={() => setCurrentStep(prev => prev - 1)}
-              className="flex-1 py-2.5 md:py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/50 rounded-xl font-bold text-xs tracking-tight hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+              className="flex-1 py-2.5 md:py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/50 rounded-xl font-bold text-xs tracking-tight hover:bg-slate-200 dark:hover:bg-white/10 transition-all focus:ring-2 focus:ring-banana/50 outline-none"
+              aria-label="Previous step"
             >
               Back
             </button>
           )}
           <button 
             onClick={handleNext}
-            className="flex-[2] py-2.5 md:py-3 bg-banana hover:bg-[#EED125] text-black rounded-xl font-bold text-xs tracking-tight shadow-lg shadow-banana/10 transition-all"
+            className="flex-[2] py-2.5 md:py-3 bg-banana hover:bg-[#EED125] text-black rounded-xl font-bold text-xs tracking-tight shadow-lg shadow-banana/10 transition-all focus:ring-2 focus:ring-banana/50 outline-none"
+            aria-label={currentStep === steps.length - 1 ? 'Finish Tour' : 'Next step'}
           >
             {currentStep === steps.length - 1 ? 'Finish Tour' : 'Next Step'}
           </button>

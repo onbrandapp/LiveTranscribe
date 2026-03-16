@@ -337,7 +337,22 @@ const App: React.FC = () => {
     setIsModelSpeaking(false);
   }, []);
 
-  const startSession = async () => {
+  const togglePause = useCallback(() => {
+    setSessionState(s => {
+      const newPaused = !s.isPaused;
+      isPausedRef.current = newPaused;
+      if (!newPaused) {
+        inputAudioContextRef.current?.resume();
+        outputAudioContextRef.current?.resume();
+      } else {
+        inputAudioContextRef.current?.suspend();
+        outputAudioContextRef.current?.suspend();
+      }
+      return { ...s, isPaused: newPaused };
+    });
+  }, []);
+
+  const startSession = useCallback(async () => {
     if (!apiKey) {
       setIsKeyModalOpen(true);
       return;
@@ -407,6 +422,10 @@ const App: React.FC = () => {
             };
 
             source.connect(scriptProcessor);
+            scriptProcessor.onended = () => {
+              source.disconnect();
+              scriptProcessor.disconnect();
+            };
             scriptProcessor.connect(inputCtx.destination);
           },
           onmessage: async (message: LiveServerMessage) => {
@@ -487,22 +506,40 @@ const App: React.FC = () => {
     } catch (err: any) {
       setSessionState(s => ({ ...s, error: err.message || 'Microphone access denied.' }));
     }
-  };
+  }, [apiKey, isTranslationEnabled, targetLanguage, selectedVoice, stopSession, updateTranscription]);
 
-  const togglePause = () => {
-    setSessionState(s => {
-      const newPaused = !s.isPaused;
-      isPausedRef.current = newPaused;
-      if (!newPaused) {
-        inputAudioContextRef.current?.resume();
-        outputAudioContextRef.current?.resume();
-      } else {
-        inputAudioContextRef.current?.suspend();
-        outputAudioContextRef.current?.suspend();
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if focused on input/textarea
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        return;
       }
-      return { ...s, isPaused: newPaused };
-    });
-  };
+
+      switch (e.code) {
+        case 'Space':
+          e.preventDefault();
+          if (sessionState.isActive) {
+            togglePause();
+          } else {
+            startSession();
+          }
+          break;
+        case 'Escape':
+          if (sessionState.isActive) {
+            stopSession();
+          }
+          break;
+        case 'KeyT':
+          if (!sessionState.isActive) {
+            setIsTranslationEnabled(prev => !prev);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [sessionState.isActive, startSession, stopSession, togglePause]);
 
   const handleTourComplete = () => {
     setShowTour(false);
@@ -539,8 +576,9 @@ const App: React.FC = () => {
               setTempKey(apiKey);
               setIsKeyModalOpen(true);
             }}
-            className="p-1.5 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center gap-2"
+            className="p-1.5 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center gap-2 focus:ring-2 focus:ring-banana/50 outline-none"
             title="API Settings"
+            aria-label="API Settings"
           >
             <svg className="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
@@ -548,8 +586,9 @@ const App: React.FC = () => {
           </button>
           <button 
             onClick={() => setShowTour(true)}
-            className="p-1.5 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+            className="p-1.5 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all focus:ring-2 focus:ring-banana/50 outline-none"
             title="Show Tour"
+            aria-label="Show Tour"
           >
             <svg className="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -557,7 +596,8 @@ const App: React.FC = () => {
           </button>
           <button 
             onClick={toggleTheme}
-            className="p-1.5 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+            className="p-1.5 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all focus:ring-2 focus:ring-banana/50 outline-none"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
           >
             {theme === 'dark' ? (
               <svg className="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
@@ -582,7 +622,10 @@ const App: React.FC = () => {
                 id="translation-toggle"
                 onClick={() => setIsTranslationEnabled(!isTranslationEnabled)}
                 disabled={sessionState.isActive}
-                className={`w-10 h-6 rounded-full transition-all relative ${isTranslationEnabled ? 'bg-banana' : 'bg-slate-200 dark:bg-white/10'} ${sessionState.isActive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                role="switch"
+                aria-checked={isTranslationEnabled}
+                aria-label="Enable Live Translation"
+                className={`w-10 h-6 rounded-full transition-all relative focus:ring-2 focus:ring-banana/50 outline-none ${isTranslationEnabled ? 'bg-banana' : 'bg-slate-200 dark:bg-white/10'} ${sessionState.isActive ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white dark:bg-matte shadow-sm transition-all ${isTranslationEnabled ? 'left-5' : 'left-1'}`}></div>
               </button>
@@ -746,10 +789,14 @@ const App: React.FC = () => {
         </div>
 
         {/* Transcript Feed Column - Main Focus on Mobile */}
-        <div className="flex-1 bg-slate-50 dark:bg-surface-dark rounded-3xl border border-black/5 dark:border-white/5 flex flex-col min-h-0 overflow-hidden shadow-2xl relative">
+        <div className="flex-1 bg-slate-50 dark:bg-surface-dark rounded-3xl border border-black/5 dark:border-white/5 flex flex-col min-h-0 overflow-hidden shadow-2xl relative" role="region" aria-label="Transcription Feed">
           <div className="px-4 md:px-6 py-3 md:py-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/80 dark:bg-surface-dark/80 backdrop-blur-xl shrink-0">
-            <h2 className="text-[10px] font-black text-slate-400 dark:text-white/40 uppercase tracking-widest md:tracking-[0.4em] truncate mr-2">Transcript Feed</h2>
+            <h2 className="text-[10px] font-black text-slate-400 dark:text-white/50 uppercase tracking-widest md:tracking-[0.4em] truncate mr-2">Transcript Feed</h2>
             <div className="flex items-center gap-2 md:gap-4 shrink-0">
+              <div className="hidden lg:flex items-center gap-2 mr-2">
+                <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-white/10 border border-black/5 dark:border-white/20 rounded text-[8px] font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">Space</span>
+                <span className="text-[8px] font-bold text-slate-400 dark:text-white/30 uppercase tracking-widest">Start/Pause</span>
+              </div>
               <div className="md:hidden">
                 <Visualizer 
                   isActive={sessionState.isActive}
@@ -786,12 +833,14 @@ const App: React.FC = () => {
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder={isTranslationEnabled ? `Translate to ${targetLanguage.name}...` : "Type a message..."}
                 disabled={!sessionState.isActive}
+                aria-label={isTranslationEnabled ? `Translate to ${targetLanguage.name}` : "Type a message to Gemini"}
                 className="w-full bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-3.5 md:p-4 pr-12 text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-banana/50 focus:border-banana outline-none transition-all disabled:opacity-50 placeholder:text-slate-400 dark:placeholder:text-white/20"
               />
               <button 
                 type="submit"
                 disabled={!sessionState.isActive || !inputText.trim()}
-                className="absolute right-2 p-2 bg-banana text-black rounded-xl shadow-lg shadow-banana/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-0 disabled:scale-90"
+                aria-label="Send message"
+                className="absolute right-2 p-2 bg-banana text-black rounded-xl shadow-lg shadow-banana/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-0 disabled:scale-90 focus:ring-2 focus:ring-banana/50 outline-none"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
@@ -806,7 +855,8 @@ const App: React.FC = () => {
           {!sessionState.isActive ? (
             <button 
               onClick={startSession}
-              className="w-full py-4 bg-banana hover:bg-[#EED125] active:scale-[0.98] transition-all rounded-2xl font-bold text-sm tracking-tight shadow-xl shadow-banana/10 text-black"
+              aria-label="Start Live Transcribe Session"
+              className="w-full py-4 bg-banana hover:bg-[#EED125] active:scale-[0.98] transition-all rounded-2xl font-bold text-sm tracking-tight shadow-xl shadow-banana/10 text-black focus:ring-4 focus:ring-banana/50 outline-none"
             >
               Start Live Transcribe
             </button>
@@ -814,7 +864,8 @@ const App: React.FC = () => {
             <div className="flex gap-3">
               <button 
                 onClick={togglePause}
-                className={`flex-1 py-4 rounded-2xl font-bold text-xs tracking-tight border-2 transition-all flex items-center justify-center gap-2 ${
+                aria-label={sessionState.isPaused ? "Resume Session" : "Pause Session"}
+                className={`flex-1 py-4 rounded-2xl font-bold text-xs tracking-tight border-2 transition-all flex items-center justify-center gap-2 focus:ring-4 focus:ring-banana/50 outline-none ${
                   sessionState.isPaused 
                     ? 'bg-banana border-banana text-black shadow-lg shadow-banana/20' 
                     : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-700 dark:text-white'
@@ -828,7 +879,8 @@ const App: React.FC = () => {
               </button>
               <button 
                 onClick={stopSession}
-                className="flex-1 py-4 bg-white dark:bg-white/5 border border-red-500/20 text-red-500 rounded-2xl font-bold text-xs tracking-tight hover:bg-red-500/5 transition-all"
+                aria-label="End Session"
+                className="flex-1 py-4 bg-white dark:bg-white/5 border border-red-500/20 text-red-500 rounded-2xl font-bold text-xs tracking-tight hover:bg-red-500/5 transition-all focus:ring-4 focus:ring-red-500/50 outline-none"
               >
                 End Session
               </button>
@@ -839,17 +891,18 @@ const App: React.FC = () => {
 
       {/* Language Modal */}
       {isDrawerRendered && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4" role="dialog" aria-modal="true" aria-labelledby="language-modal-title">
           <div className={`absolute inset-0 bg-black/40 dark:bg-black/60 overlay-blur ${isDrawerClosing ? 'animate-fade-out' : 'animate-fade-in'}`} onClick={closeDrawer}></div>
           <div className={`relative w-full max-w-lg bg-white/90 dark:bg-surface-dark/90 backdrop-blur-2xl border-t md:border border-black/5 dark:border-white/10 rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl p-6 md:p-8 ${isDrawerClosing ? 'animate-slide-down' : 'animate-slide-up'}`}>
             {/* Handle for mobile */}
             <div className="w-12 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-6 md:hidden"></div>
             
             <div className="flex items-center justify-between mb-8">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Translation Target</h3>
+              <h3 id="language-modal-title" className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Translation Target</h3>
               <button 
                 onClick={closeDrawer}
-                className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+                aria-label="Close modal"
+                className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors focus:ring-2 focus:ring-banana/50 outline-none"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
@@ -890,14 +943,15 @@ const App: React.FC = () => {
 
       {/* API Key Modal */}
       {isKeyModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="api-modal-title">
           <div className="absolute inset-0 bg-black/60 dark:bg-black/80 overlay-blur animate-fade-in" onClick={() => setIsKeyModalOpen(false)}></div>
           <div className="relative w-full max-w-md bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-3xl shadow-2xl p-8 animate-slide-up">
             <div className="flex items-center justify-between mb-8">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">API Settings</h3>
+              <h3 id="api-modal-title" className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">API Settings</h3>
               <button 
                 onClick={() => setIsKeyModalOpen(false)}
-                className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+                aria-label="Close modal"
+                className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors focus:ring-2 focus:ring-banana/50 outline-none"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />

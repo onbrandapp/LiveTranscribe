@@ -30,6 +30,10 @@ const TranscriptionList: React.FC<TranscriptionListProps> = ({ transcripts }) =>
     <div 
       ref={scrollRef}
       className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-slate-50/50 dark:bg-matte/40"
+      role="log"
+      aria-live="polite"
+      aria-relevant="additions"
+      aria-label="Transcription history"
     >
       {transcripts.map((entry) => {
         const isActive = !entry.isComplete;
