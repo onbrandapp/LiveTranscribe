@@ -9,6 +9,7 @@ export interface TranscriptEntry {
   speaker: Speaker;
   text: string;
   translatedText?: string;
+  imageUrl?: string;
   timestamp: number;
   isComplete: boolean;
 }

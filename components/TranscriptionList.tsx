@@ -116,6 +116,17 @@ const TranscriptionList: React.FC<TranscriptionListProps> = ({ transcripts }) =>
                   )}
                 </p>
 
+                {entry.imageUrl && (
+                  <div className="mt-3 rounded-lg overflow-hidden border border-black/10 dark:border-white/10">
+                    <img 
+                      src={entry.imageUrl} 
+                      alt="Uploaded for analysis" 
+                      className="max-w-full h-auto object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                )}
+
                 {entry.translatedText && (
                   <div className={`pt-2 border-t mt-2 ${!isLeft ? 'border-black/10' : 'border-slate-100 dark:border-white/5'}`}>
                     <p className={`text-[11px] font-semibold leading-tight ${

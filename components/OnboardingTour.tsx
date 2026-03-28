@@ -41,6 +41,12 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
       targetId: 'translation-toggle',
     },
     {
+      id: 'image-translation',
+      title: 'Image Translation',
+      content: 'Upload an image with text (like a product label or sign) and Gemini will extract and translate it for you instantly.',
+      targetId: 'image-upload-btn',
+    },
+    {
       id: 'start',
       title: 'Start Transcribing',
       content: 'Once you\'re ready, click here to begin your live session. Speak naturally and watch the magic happen!',

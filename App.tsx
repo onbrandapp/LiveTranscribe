@@ -95,6 +95,7 @@ const App: React.FC = () => {
     return [];
   });
   const [inputText, setInputText] = useState('');
+  const [isImageProcessing, setIsImageProcessing] = useState(false);
   
   const [apiKey, setApiKey] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -224,6 +225,53 @@ const App: React.FC = () => {
     } catch (err) {
       console.error("Failed to send text input:", err);
       setSessionState(s => ({ ...s, error: 'Failed to send message. Please try again.' }));
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !apiKey) return;
+
+    setIsImageProcessing(true);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Data = (reader.result as string).split(',')[1];
+        const ai = new GoogleGenAI({ apiKey });
+        
+        const prompt = isTranslationEnabled 
+          ? `Extract all text from this image and translate it into ${targetLanguage.name}. Provide the original text followed by the translation in a clear format.`
+          : `Extract all text from this image and provide it in a clear format.`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: {
+            parts: [
+              { inlineData: { data: base64Data, mimeType: file.type } },
+              { text: prompt }
+            ]
+          }
+        });
+
+        const resultText = response.text;
+        
+        const newEntry: TranscriptEntry = {
+          id: Date.now().toString(),
+          speaker: Speaker.MODEL,
+          text: `[Image Analysis]\n${resultText}`,
+          imageUrl: reader.result as string, // Store the base64 URL
+          timestamp: Date.now(),
+          isComplete: true,
+        };
+        
+        setTranscripts(prev => [...prev, newEntry]);
+        setIsImageProcessing(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Image processing error:', error);
+      setIsImageProcessing(false);
+      setSessionState(prev => ({ ...prev, error: 'Failed to process image. Please check your API key and try again.' }));
     }
   };
 
@@ -827,6 +875,22 @@ const App: React.FC = () => {
           {/* Keyboard Input Bar */}
           <div className="p-3 md:p-4 border-t border-black/5 dark:border-white/5 bg-white/50 dark:bg-surface-dark/50 backdrop-blur-xl shrink-0">
             <form onSubmit={handleTextSubmit} className="relative flex items-center gap-2">
+              <label id="image-upload-btn" className="p-2 text-slate-400 hover:text-banana transition-colors cursor-pointer disabled:opacity-50 focus-within:ring-2 focus-within:ring-banana/50 rounded-xl outline-none" aria-label="Upload image for translation">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleImageUpload}
+                  disabled={isImageProcessing}
+                />
+                {isImageProcessing ? (
+                  <div className="w-5 h-5 border-2 border-banana border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </label>
               <input 
                 type="text"
                 value={inputText}
