@@ -104,6 +104,7 @@ const App: React.FC = () => {
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isVoiceLibraryOpen, setIsVoiceLibraryOpen] = useState(false);
+  const [showVoiceHelp, setShowVoiceHelp] = useState(false);
   const [showAudioOverlay, setShowAudioOverlay] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('gemini_audio_overlay_enabled') !== 'false';
@@ -1407,6 +1408,61 @@ const App: React.FC = () => {
                     ))}
                   </div>
                 )}
+
+                <div className="mt-8 p-6 bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-black/5 dark:border-white/5 group-hover:border-banana/20 transition-all">
+                  <button 
+                    onClick={() => setShowVoiceHelp(!showVoiceHelp)}
+                    className="flex items-center justify-between w-full text-left outline-none"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${showVoiceHelp ? 'bg-banana text-black' : 'bg-slate-100 dark:bg-white/10 text-slate-400'}`}>
+                        <HelpCircle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">What is an AI Reference?</p>
+                        <p className="text-[8px] text-slate-400 dark:text-white/20 uppercase font-bold tracking-tighter">Understanding custom voices</p>
+                      </div>
+                    </div>
+                    <motion.div
+                      animate={{ rotate: showVoiceHelp ? 180 : 0 }}
+                      className="text-slate-400"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </motion.div>
+                  </button>
+                  <AnimatePresence>
+                    {showVoiceHelp && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-6 space-y-4">
+                          <div className="h-[1px] bg-black/5 dark:bg-white/5 w-full" />
+                          <p className="text-[11px] text-slate-500 dark:text-white/40 leading-relaxed italic">
+                            Uploading a custom voice tells Gemini to use your audio as a <span className="text-banana font-bold">Stylistic Blueprint</span>.
+                          </p>
+                          <p className="text-[11px] text-slate-500 dark:text-white/40 leading-relaxed">
+                            Rather than simply playing back a recording, Gemini analyzes the pitch, resonance, and unique characteristics of your sample. It then synthesizes its own responses to <span className="text-slate-900 dark:text-white font-bold tracking-tight text-[10px] italic">mimic the persona</span> you've provided.
+                          </p>
+                          <div className="grid grid-cols-2 gap-4 pt-2">
+                            <div className="flex flex-col gap-1">
+                              <p className="text-[9px] font-black text-banana uppercase">Usage</p>
+                              <p className="text-[10px] text-slate-400">Works in both Chat and Live Translation modes.</p>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <p className="text-[9px] font-black text-banana uppercase">Privacy</p>
+                              <p className="text-[10px] text-slate-400">Voices are stored only on your device.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
               <div className="p-8 bg-slate-50 dark:bg-white/5 flex items-center justify-between">
