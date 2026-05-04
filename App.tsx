@@ -1,13 +1,32 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Menu as MenuIcon, 
+  X, 
+  Sun, 
+  Moon, 
+  Key, 
+  HelpCircle, 
+  Play, 
+  Pause, 
+  Square, 
+  Download,
+  Trash2,
+  Image as ImageIcon,
+  ArrowUp,
+  Volume2,
+  Settings,
+  Monitor
+} from 'lucide-react';
 import { Speaker, TranscriptEntry, LiveSessionState, SUPPORTED_LANGUAGES, Language, Voice, AVAILABLE_VOICES } from './types';
 import { decode, decodeAudioData, createPcmBlob } from './services/audio-helpers';
 import TranscriptionList from './components/TranscriptionList';
 import Visualizer from './components/Visualizer';
 import OnboardingTour from './components/OnboardingTour';
 
-const MODEL_NAME = 'gemini-2.5-flash-native-audio-preview-12-2025';
+const MODEL_NAME = 'gemini-3.1-flash-live-preview';
 
 const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -82,6 +101,13 @@ const App: React.FC = () => {
 
   const [isDrawerRendered, setIsDrawerRendered] = useState(false);
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showAudioOverlay, setShowAudioOverlay] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('gemini_audio_overlay_enabled') !== 'false';
+    }
+    return true;
+  });
 
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>(() => {
     if (typeof window !== 'undefined') {
@@ -100,7 +126,7 @@ const App: React.FC = () => {
   const [apiKey, setApiKey] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('gemini_api_key');
-      return saved || (process.env.API_KEY || '');
+      return saved || (process.env.GEMINI_API_KEY || process.env.API_KEY || '');
     }
     return '';
   });
@@ -109,6 +135,7 @@ const App: React.FC = () => {
   
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isModelSpeaking, setIsModelSpeaking] = useState(false);
+  const [isModelPlaybackPaused, setIsModelPlaybackPaused] = useState(false);
 
   const [showTour, setShowTour] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -161,6 +188,20 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('gemini_custom_voices', JSON.stringify(customVoices));
   }, [customVoices]);
+
+  useEffect(() => {
+    localStorage.setItem('gemini_audio_overlay_enabled', String(showAudioOverlay));
+  }, [showAudioOverlay]);
+
+  const [isOverlayVisible, setIsOverlayVisible] = useState(false);
+
+  useEffect(() => {
+    if (isModelSpeaking && showAudioOverlay) {
+      setIsOverlayVisible(true);
+    } else if (!showAudioOverlay) {
+      setIsOverlayVisible(false);
+    }
+  }, [isModelSpeaking, showAudioOverlay]);
 
   const handleVoiceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -217,10 +258,9 @@ const App: React.FC = () => {
       updateTranscription(Speaker.USER, textToSend, true);
       
       // Send the text content to the Live session
-      // Using sendClientContent which is the correct way to send text turns in Live API
-      session.sendClientContent({ 
-        turns: [{ role: 'user', parts: [{ text: textToSend }] }],
-        turnComplete: true 
+      // Using sendRealtimeInput which is the correct way to send text in Live API
+      session.sendRealtimeInput({ 
+        text: textToSend
       });
     } catch (err) {
       console.error("Failed to send text input:", err);
@@ -383,6 +423,7 @@ const App: React.FC = () => {
     setSessionState({ isActive: false, isPaused: false, error: null });
     setIsUserSpeaking(false);
     setIsModelSpeaking(false);
+    setIsModelPlaybackPaused(false);
   }, []);
 
   const togglePause = useCallback(() => {
@@ -400,6 +441,28 @@ const App: React.FC = () => {
     });
   }, []);
 
+  const toggleModelPlayback = useCallback(() => {
+    if (!outputAudioContextRef.current) return;
+    if (isModelPlaybackPaused) {
+      outputAudioContextRef.current.resume().catch(() => {});
+      setIsModelPlaybackPaused(false);
+    } else {
+      outputAudioContextRef.current.suspend().catch(() => {});
+      setIsModelPlaybackPaused(true);
+    }
+  }, [isModelPlaybackPaused]);
+
+  const stopModelAudio = useCallback(() => {
+    activeSourcesRef.current.forEach(source => {
+      try { source.stop(); } catch(e) {}
+    });
+    activeSourcesRef.current.clear();
+    nextStartTimeRef.current = 0;
+    setIsModelSpeaking(false);
+    setIsModelPlaybackPaused(false);
+    outputAudioContextRef.current?.resume().catch(() => {});
+  }, []);
+
   const startSession = useCallback(async () => {
     if (!apiKey) {
       setIsKeyModalOpen(true);
@@ -410,6 +473,10 @@ const App: React.FC = () => {
 
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+
+      // Explicitly resume contexts for mobile/Safari support
+      await inputCtx.resume();
+      await outputCtx.resume();
       
       inputAudioContextRef.current = inputCtx;
       outputAudioContextRef.current = outputCtx;
@@ -445,8 +512,6 @@ const App: React.FC = () => {
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice.isCustom ? 'Zephyr' : selectedVoice.id } },
           },
-          inputAudioTranscription: {},
-          outputAudioTranscription: {},
           systemInstruction,
         },
         callbacks: {
@@ -463,9 +528,14 @@ const App: React.FC = () => {
               const volume = inputData.reduce((a, b) => a + Math.abs(b), 0) / inputData.length;
               setIsUserSpeaking(volume > 0.005);
 
-              const pcmBlob = createPcmBlob(inputData);
+              const pcmData = createPcmBlob(inputData);
               sessionPromise.then(session => {
-                session.sendRealtimeInput({ media: pcmBlob });
+                session.sendRealtimeInput({ 
+                  audio: { 
+                    data: pcmData.data, 
+                    mimeType: pcmData.mimeType 
+                  } 
+                });
               }).catch(() => {});
             };
 
@@ -539,9 +609,10 @@ const App: React.FC = () => {
               modelTextBuffer.current = ''; // Clear partial model text if interrupted
             }
           },
-          onerror: (err) => {
+          onerror: (err: any) => {
             console.error("Live API Error:", err);
-            setSessionState(s => ({ ...s, error: 'Connection lost. Reconnecting...' }));
+            const errorMsg = err?.message || err?.error?.message || err?.toString() || 'Unknown network error';
+            setSessionState(s => ({ ...s, error: `Live API Error: ${errorMsg}` }));
             stopSession();
           },
           onclose: () => {
@@ -597,7 +668,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center p-3 md:p-4 transition-colors duration-500 bg-white dark:bg-matte selection:bg-banana selection:text-black overflow-x-hidden">
       {showTour && <OnboardingTour onComplete={handleTourComplete} />}
-      <header className="w-full max-w-7xl flex items-center justify-between mb-4 border-b border-black/5 dark:border-white/5 pb-4">
+      <header className="w-full max-w-7xl flex items-center justify-between mb-4 border-b border-black/5 dark:border-white/5 pb-4 relative">
         <div className="flex items-center gap-2 md:gap-4 min-w-0">
           <div className="w-7 h-7 md:w-10 md:h-10 bg-banana rounded-lg md:rounded-xl flex items-center justify-center shadow-lg shadow-banana/20 shrink-0">
             <svg className="w-4 h-4 md:w-6 md:h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -619,40 +690,128 @@ const App: React.FC = () => {
         
         <div className="flex items-center gap-1 md:gap-3 shrink-0">
           <button 
-            id="api-key-btn"
-            onClick={() => {
-              setTempKey(apiKey);
-              setIsKeyModalOpen(true);
-            }}
-            className="p-1.5 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center gap-2 focus:ring-2 focus:ring-banana/50 outline-none"
-            title="API Settings"
-            aria-label="API Settings"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className={`p-2 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center gap-2 focus:ring-2 focus:ring-banana/50 outline-none z-[75] ${isMenuOpen ? 'bg-banana/10 border-banana/50 text-banana' : ''}`}
+            aria-label="Open Menu"
           >
-            <svg className="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-            </svg>
+            <AnimatePresence mode="wait">
+              {isMenuOpen ? (
+                <motion.div
+                  key="close"
+                  initial={{ opacity: 0, rotate: -90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: 90 }}
+                >
+                  <X className="w-5 h-5 md:w-6 md:h-6" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="menu"
+                  initial={{ opacity: 0, rotate: 90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: -90 }}
+                >
+                  <MenuIcon className="w-5 h-5 md:w-6 md:h-6" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </button>
-          <button 
-            onClick={() => setShowTour(true)}
-            className="p-1.5 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all focus:ring-2 focus:ring-banana/50 outline-none"
-            title="Show Tour"
-            aria-label="Show Tour"
-          >
-            <svg className="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </button>
-          <button 
-            onClick={toggleTheme}
-            className="p-1.5 md:p-2.5 bg-slate-100 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg md:rounded-xl text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10 transition-all focus:ring-2 focus:ring-banana/50 outline-none"
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          >
-            {theme === 'dark' ? (
-              <svg className="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-            ) : (
-              <svg className="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+
+          {/* Navigation Menu Dropdown */}
+          <AnimatePresence>
+            {isMenuOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm z-[70]"
+                />
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  className="absolute top-16 right-0 w-64 md:w-72 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-2xl border border-black/5 dark:border-white/10 rounded-[2rem] shadow-2xl z-[71] overflow-hidden"
+                >
+                  <div className="p-2 space-y-1">
+                    <button
+                      onClick={() => {
+                        setTempKey(apiKey);
+                        setIsKeyModalOpen(true);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
+                    >
+                      <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
+                        <Key className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">API Settings</p>
+                        <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Configure Key</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowTour(true);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
+                    >
+                      <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
+                        <HelpCircle className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">App Walkthrough</p>
+                        <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Restart Tour</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        toggleTheme();
+                      }}
+                      className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
+                    >
+                      <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
+                        {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Switch Theme</p>
+                      </div>
+                    </button>
+
+                    <div className="h-[1px] bg-black/5 dark:bg-white/5 mx-4 my-2" />
+
+                    <div className="px-4 py-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-banana/10 text-banana rounded-xl flex items-center justify-center">
+                            <Volume2 className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">Audio Overlay</p>
+                            <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Playback Controls</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => setShowAudioOverlay(!showAudioOverlay)}
+                          className={`w-10 h-6 rounded-full transition-all relative outline-none ring-offset-2 focus:ring-2 focus:ring-banana/50 ${showAudioOverlay ? 'bg-banana' : 'bg-slate-200 dark:bg-white/10'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white dark:bg-matte shadow-sm transition-all ${showAudioOverlay ? 'left-5' : 'left-1'}`}></div>
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-400 dark:text-white/30 leading-relaxed italic">
+                        Show floating controls when Gemini is speaking.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
             )}
-          </button>
+          </AnimatePresence>
         </div>
       </header>
 
@@ -745,11 +904,17 @@ const App: React.FC = () => {
                   <div className="space-y-2 pt-2">
                     <p className="text-[8px] font-bold text-slate-400 dark:text-white/20 uppercase tracking-widest">Custom</p>
                     {customVoices.map(voice => (
-                      <button
+                      <div
                         key={voice.id}
-                        disabled={sessionState.isActive}
-                        onClick={() => setSelectedVoice(voice)}
-                        className={`w-full flex flex-col items-start p-3 rounded-xl border transition-all relative group ${
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => !sessionState.isActive && setSelectedVoice(voice)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            !sessionState.isActive && setSelectedVoice(voice);
+                          }
+                        }}
+                        className={`w-full flex flex-col items-start p-3 rounded-xl border transition-all relative group cursor-pointer ${
                           selectedVoice.id === voice.id 
                             ? 'bg-banana/10 border-banana text-slate-900 dark:text-white' 
                             : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-500 dark:text-white/40 hover:border-banana/30'
@@ -760,15 +925,19 @@ const App: React.FC = () => {
                           <div className="flex items-center gap-2">
                             {selectedVoice.id === voice.id && <div className="w-2 h-2 rounded-full bg-banana animate-pulse"></div>}
                             <button 
-                              onClick={(e) => removeCustomVoice(voice.id, e)}
-                              className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeCustomVoice(voice.id, e);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-all focus:opacity-100"
+                              aria-label={`Remove ${voice.name}`}
                             >
                               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                           </div>
                         </div>
                         <span className="text-[10px] opacity-60">Custom Voice Sample</span>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -871,6 +1040,71 @@ const App: React.FC = () => {
             </div>
           </div>
           <TranscriptionList transcripts={transcripts} />
+
+          <AnimatePresence>
+            {showAudioOverlay && isOverlayVisible && (
+              <motion.div
+                initial={{ opacity: 0, y: 20, x: '-50%', scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
+                exit={{ opacity: 0, y: 20, x: '-50%', scale: 0.9 }}
+                className="absolute bottom-24 left-1/2 z-[100] flex items-center gap-1.5 bg-white/90 dark:bg-surface-dark/95 backdrop-blur-2xl border border-banana/50 px-4 py-2 rounded-2xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.4)] ring-1 ring-black/5 dark:ring-white/5"
+              >
+                <div className="flex items-center gap-0.5">
+                  <button 
+                    onClick={toggleModelPlayback}
+                    className="p-2.5 hover:bg-banana/10 rounded-xl transition-all text-slate-800 dark:text-white group flex items-center justify-center"
+                    title={isModelPlaybackPaused ? 'Play AI Audio' : 'Pause AI Audio'}
+                  >
+                    {isModelPlaybackPaused ? (
+                      <Play className="w-5 h-5 fill-current" />
+                    ) : (
+                      <Pause className="w-5 h-5 fill-current" />
+                    )}
+                  </button>
+                  <button 
+                    onClick={stopModelAudio}
+                    className="p-2.5 hover:bg-red-500/10 rounded-xl transition-all text-red-500 group flex items-center justify-center"
+                    title="Stop AI Audio"
+                  >
+                    <Square className="w-5 h-5 fill-current" />
+                  </button>
+                </div>
+
+                <div className="h-6 w-[1px] bg-black/5 dark:bg-white/10 mx-1.5" />
+
+                <div className="flex items-center gap-3 px-1 pr-2">
+                  <div className="flex gap-[3px] items-end pb-0.5">
+                    {[1, 2, 3, 4].map((i) => (
+                      <motion.div
+                        key={i}
+                        animate={{ height: isModelPlaybackPaused || !isModelSpeaking ? 2 : [4, i * 4 + 4, 4] }}
+                        transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.1 }}
+                        className="w-[3px] bg-banana rounded-full shadow-[0_0_8px_rgba(238,209,37,0.4)]"
+                      />
+                    ))}
+                  </div>
+                  <div className="flex flex-col min-w-[70px]">
+                    <span className="text-[10px] font-black uppercase tracking-[0.1em] text-banana drop-shadow-sm">
+                      {isModelPlaybackPaused ? 'AI Paused' : (isModelSpeaking ? 'AI Speaking' : 'AI Finished')}
+                    </span>
+                    <span className="text-[7px] font-bold text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] -mt-0.5">
+                      Live Output
+                    </span>
+                  </div>
+                </div>
+
+                <div className="h-6 w-[1px] bg-black/5 dark:bg-white/10 mx-1.5" />
+
+                <button 
+                  onClick={() => setIsOverlayVisible(false)}
+                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white transition-all"
+                  aria-label="Dismiss Overlay"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           {/* Keyboard Input Bar */}
           <div className="p-3 md:p-4 border-t border-black/5 dark:border-white/5 bg-white/50 dark:bg-surface-dark/50 backdrop-blur-xl shrink-0">
