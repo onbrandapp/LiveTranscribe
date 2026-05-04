@@ -18,7 +18,8 @@ import {
   ArrowUp,
   Volume2,
   Settings,
-  Monitor
+  Monitor,
+  Keyboard
 } from 'lucide-react';
 import { Speaker, TranscriptEntry, LiveSessionState, SUPPORTED_LANGUAGES, Language, Voice, AVAILABLE_VOICES } from './types';
 import { decode, decodeAudioData, createPcmBlob } from './services/audio-helpers';
@@ -102,6 +103,7 @@ const App: React.FC = () => {
   const [isDrawerRendered, setIsDrawerRendered] = useState(false);
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isVoiceLibraryOpen, setIsVoiceLibraryOpen] = useState(false);
   const [showAudioOverlay, setShowAudioOverlay] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('gemini_audio_overlay_enabled') !== 'false';
@@ -120,6 +122,24 @@ const App: React.FC = () => {
     }
     return [];
   });
+
+  const [hotkeys, setHotkeys] = useState<Record<string, string>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gemini_hotkeys');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) { /* fallback */ }
+      }
+    }
+    return {
+      toggleSession: 'KeyS',
+      togglePause: 'KeyP',
+      toggleTranslation: 'KeyT',
+    };
+  });
+  const [isHotkeysModalOpen, setIsHotkeysModalOpen] = useState(false);
+  const [activeHotkeySetting, setActiveHotkeySetting] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [isImageProcessing, setIsImageProcessing] = useState(false);
   
@@ -182,16 +202,31 @@ const App: React.FC = () => {
   }, [targetLanguage]);
 
   useEffect(() => {
-    localStorage.setItem('gemini_selected_voice', JSON.stringify(selectedVoice));
+    try {
+      localStorage.setItem('gemini_selected_voice', JSON.stringify(selectedVoice));
+    } catch (e) {
+      console.error('Failed to save selected voice:', e);
+    }
   }, [selectedVoice]);
 
   useEffect(() => {
-    localStorage.setItem('gemini_custom_voices', JSON.stringify(customVoices));
+    try {
+      localStorage.setItem('gemini_custom_voices', JSON.stringify(customVoices));
+    } catch (e) {
+      console.error('Failed to save custom voices (likely quota exceeded):', e);
+      if (customVoices.length > 0) {
+        setSessionState(s => ({ ...s, error: 'Storage full. Try removing some custom voices.' }));
+      }
+    }
   }, [customVoices]);
 
   useEffect(() => {
     localStorage.setItem('gemini_audio_overlay_enabled', String(showAudioOverlay));
   }, [showAudioOverlay]);
+  
+  useEffect(() => {
+    localStorage.setItem('gemini_hotkeys', JSON.stringify(hotkeys));
+  }, [hotkeys]);
 
   const [isOverlayVisible, setIsOverlayVisible] = useState(false);
 
@@ -209,6 +244,11 @@ const App: React.FC = () => {
 
     if (!file.type.startsWith('audio/')) {
       setSessionState(s => ({ ...s, error: 'Please upload an audio file.' }));
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setSessionState(s => ({ ...s, error: 'Voice sample too large. Please upload a file under 2MB for browser storage.' }));
       return;
     }
 
@@ -629,36 +669,32 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if focused on input/textarea
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+      // Don't trigger if user is typing in an input/textarea or if a listener for hotkey configuration is active
+      if (
+        e.target instanceof HTMLInputElement || 
+        e.target instanceof HTMLTextAreaElement || 
+        (e.target as HTMLElement).isContentEditable ||
+        activeHotkeySetting
+      ) {
         return;
       }
 
-      switch (e.code) {
-        case 'Space':
-          e.preventDefault();
-          if (sessionState.isActive) {
-            togglePause();
-          } else {
-            startSession();
-          }
-          break;
-        case 'Escape':
-          if (sessionState.isActive) {
-            stopSession();
-          }
-          break;
-        case 'KeyT':
-          if (!sessionState.isActive) {
-            setIsTranslationEnabled(prev => !prev);
-          }
-          break;
+      if (e.code === hotkeys.toggleSession) {
+        e.preventDefault();
+        if (sessionState.isActive) stopSession();
+        else startSession();
+      } else if (e.code === hotkeys.togglePause) {
+        e.preventDefault();
+        if (sessionState.isActive) togglePause();
+      } else if (e.code === hotkeys.toggleTranslation) {
+        e.preventDefault();
+        setIsTranslationEnabled(prev => !prev);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sessionState.isActive, startSession, stopSession, togglePause]);
+  }, [hotkeys, sessionState.isActive, startSession, stopSession, togglePause, activeHotkeySetting]);
 
   const handleTourComplete = () => {
     setShowTour(false);
@@ -780,6 +816,40 @@ const App: React.FC = () => {
                       <div className="text-left">
                         <p className="text-sm font-bold text-slate-900 dark:text-white">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</p>
                         <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Switch Theme</p>
+                      </div>
+                    </button>
+
+                    <div className="h-[1px] bg-black/5 dark:bg-white/5 mx-4 my-2" />
+
+                    <button
+                      onClick={() => {
+                        setIsVoiceLibraryOpen(true);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
+                    >
+                      <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
+                        <ImageIcon className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">Voice Library</p>
+                        <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Manage Custom</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsHotkeysModalOpen(true);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
+                    >
+                      <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
+                        <Keyboard className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">Hotkeys</p>
+                        <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Keyboard Shortcuts</p>
                       </div>
                     </button>
 
@@ -1239,7 +1309,233 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* API Key Modal */}
+      {/* Voice Library Modal */}
+      <AnimatePresence>
+        {isVoiceLibraryOpen && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md" 
+              onClick={() => setIsVoiceLibraryOpen(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Voice <span className="text-banana">Library</span></h3>
+                  <p className="text-xs text-slate-400 dark:text-white/20 font-bold uppercase tracking-widest mt-1">Manage your custom AI references</p>
+                </div>
+                <button 
+                  onClick={() => setIsVoiceLibraryOpen(false)}
+                  className="p-3 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all transform hover:rotate-90"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                {customVoices.length === 0 ? (
+                  <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 opacity-40">
+                    <div className="w-20 h-20 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center">
+                      <Volume2 className="w-10 h-10" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">No Custom Voices Yet</p>
+                      <p className="text-xs text-slate-400 dark:text-white/40 mt-1 max-w-[200px]">Upload an audio sample in the main sidebar to get started.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {customVoices.map(voice => (
+                      <div 
+                        key={voice.id}
+                        className={`p-5 rounded-3xl border transition-all duration-300 flex flex-col gap-4 group ${
+                          selectedVoice.id === voice.id 
+                            ? 'bg-banana/10 border-banana shadow-xl shadow-banana/5' 
+                            : 'bg-slate-50/50 dark:bg-white/5 border-transparent hover:border-banana/30'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="min-w-0">
+                            <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest truncate">{voice.name}</p>
+                            <p className="text-[10px] text-slate-400 dark:text-white/30 truncate mt-0.5">Reference Sample</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => {
+                                const audio = new Audio(voice.sampleUrl);
+                                audio.play().catch(console.error);
+                              }}
+                              className="p-2 bg-white dark:bg-white/10 rounded-xl text-slate-400 hover:text-banana dark:hover:text-banana transition-all shadow-sm"
+                              title="Play Sample"
+                            >
+                              <Play className="w-4 h-4 fill-current" />
+                            </button>
+                            <button 
+                              onClick={(e) => removeCustomVoice(voice.id, e)}
+                              className="p-2 bg-white dark:bg-white/10 rounded-xl text-slate-400 hover:text-red-500 transition-all shadow-sm"
+                              title="Delete Voice"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            if (!sessionState.isActive) {
+                              setSelectedVoice(voice);
+                              setIsVoiceLibraryOpen(false);
+                            }
+                          }}
+                          disabled={sessionState.isActive}
+                          className={`w-full py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all ${
+                            selectedVoice.id === voice.id
+                              ? 'bg-banana text-black'
+                              : 'bg-white dark:bg-white/10 text-slate-600 dark:text-white/50 hover:bg-banana/20 hover:text-banana'
+                          } disabled:opacity-50`}
+                        >
+                          {selectedVoice.id === voice.id ? 'Currently Active' : 'Set as Reference'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-8 bg-slate-50 dark:bg-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-banana/20 rounded-lg flex items-center justify-center">
+                    <Monitor className="w-4 h-4 text-banana" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-widest">Storage Status</p>
+                    <p className="text-[9px] text-slate-400 dark:text-white/20">Saved in your local browser session</p>
+                  </div>
+                </div>
+                {customVoices.length > 0 && (
+                  <button 
+                    onClick={() => {
+                      if (confirm('Are you sure you want to delete all custom voices?')) {
+                        setCustomVoices([]);
+                        if (selectedVoice.isCustom) setSelectedVoice(AVAILABLE_VOICES[0]);
+                      }
+                    }}
+                    className="px-4 py-2 text-[10px] font-bold text-red-500 hover:bg-red-500/10 rounded-xl transition-all uppercase tracking-widest"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+          {/* Hotkeys Modal */}
+      <AnimatePresence>
+        {isHotkeysModalOpen && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md" 
+              onClick={() => setIsHotkeysModalOpen(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Keyboard <span className="text-banana">Shortcuts</span></h3>
+                  <p className="text-xs text-slate-400 dark:text-white/20 font-bold uppercase tracking-widest mt-1">Configure your hotkeys</p>
+                </div>
+                <button 
+                  onClick={() => setIsHotkeysModalOpen(false)}
+                  className="p-3 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all transform hover:rotate-90"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <div className="space-y-4">
+                  {[
+                    { key: 'toggleSession', label: 'Start/Stop Session', icon: Play },
+                    { key: 'togglePause', label: 'Pause/Resume AI', icon: Pause },
+                    { key: 'toggleTranslation', label: 'Toggle Translation', icon: Volume2 }
+                  ].map((setting) => (
+                    <div key={setting.key} className="flex items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-banana transition-colors">
+                          <setting.icon className="w-4 h-4" />
+                        </div>
+                        <p className="text-sm font-bold text-slate-700 dark:text-white/80">{setting.label}</p>
+                      </div>
+                      <button
+                        onClick={() => activeHotkeySetting === setting.key ? setActiveHotkeySetting(null) : setActiveHotkeySetting(setting.key)}
+                        className={`min-w-[100px] h-10 rounded-xl border font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
+                          activeHotkeySetting === setting.key
+                            ? 'bg-banana/20 border-banana text-banana shadow-[0_0_15px_rgba(238,209,37,0.2)]'
+                            : 'bg-slate-50 dark:bg-white/5 border-transparent text-slate-400 dark:text-white/20 hover:border-banana/50 hover:text-banana'
+                        }`}
+                      >
+                        {activeHotkeySetting === setting.key ? (
+                          <motion.span
+                            animate={{ opacity: [1, 0.5, 1] }}
+                            transition={{ repeat: Infinity, duration: 1 }}
+                          >
+                            Press Any Key...
+                          </motion.span>
+                        ) : (
+                          hotkeys[setting.key].replace('Key', '')
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {activeHotkeySetting && (
+                  <div 
+                    tabIndex={0} 
+                    autoFocus
+                    onKeyDown={(e) => {
+                      e.preventDefault();
+                      setHotkeys(prev => ({ ...prev, [activeHotkeySetting!]: e.code }));
+                      setActiveHotkeySetting(null);
+                    }}
+                    className="fixed inset-0 z-[-1]"
+                  />
+                )}
+
+                <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl">
+                  <p className="text-[10px] text-slate-400 dark:text-white/20 leading-relaxed italic text-center">
+                    Click a hotkey button and press a new key to reassign it.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-8 bg-slate-50 dark:bg-white/5 flex items-center justify-center">
+                <button 
+                  onClick={() => setHotkeys({ toggleSession: 'KeyS', togglePause: 'KeyP', toggleTranslation: 'KeyT' })}
+                  className="px-6 py-2 text-[10px] font-bold text-slate-400 hover:text-banana transition-all uppercase tracking-widest"
+                >
+                  Reset to Defaults
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       {isKeyModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="api-modal-title">
           <div className="absolute inset-0 bg-black/60 dark:bg-black/80 overlay-blur animate-fade-in" onClick={() => setIsKeyModalOpen(false)}></div>
