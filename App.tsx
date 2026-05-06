@@ -778,14 +778,14 @@ const App: React.FC = () => {
                         setIsKeyModalOpen(true);
                         setIsMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
+                      className="w-full flex items-center gap-2 md:gap-3 p-3 md:p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
                     >
-                      <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
-                        <Key className="w-5 h-5" />
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
+                        <Key className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">API Settings</p>
-                        <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Configure Key</p>
+                        <p className="text-xs md:text-sm font-bold text-slate-900 dark:text-white">API Settings</p>
+                        <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Configure Key</p>
                       </div>
                     </button>
 
@@ -794,14 +794,14 @@ const App: React.FC = () => {
                         setShowTour(true);
                         setIsMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
+                      className="w-full flex items-center gap-2 md:gap-3 p-3 md:p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
                     >
-                      <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
-                        <HelpCircle className="w-5 h-5" />
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
+                        <HelpCircle className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">App Walkthrough</p>
-                        <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Restart Tour</p>
+                        <p className="text-xs md:text-sm font-bold text-slate-900 dark:text-white">App Walkthrough</p>
+                        <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Restart Tour</p>
                       </div>
                     </button>
 
@@ -809,14 +809,14 @@ const App: React.FC = () => {
                       onClick={() => {
                         toggleTheme();
                       }}
-                      className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
+                      className="w-full flex items-center gap-2 md:gap-3 p-3 md:p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
                     >
-                      <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
-                        {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
+                        {theme === 'dark' ? <Sun className="w-4 h-4 md:w-5 md:h-5" /> : <Moon className="w-4 h-4 md:w-5 md:h-5" />}
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Switch Theme</p>
+                        <p className="text-xs md:text-sm font-bold text-slate-900 dark:text-white">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</p>
+                        <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Switch Theme</p>
                       </div>
                     </button>
 
@@ -827,14 +827,14 @@ const App: React.FC = () => {
                         setIsVoiceLibraryOpen(true);
                         setIsMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
+                      className="w-full flex items-center gap-2 md:gap-3 p-3 md:p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
                     >
-                      <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
-                        <ImageIcon className="w-5 h-5" />
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
+                        <ImageIcon className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">Voice Library</p>
-                        <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Manage Custom</p>
+                        <p className="text-xs md:text-sm font-bold text-slate-900 dark:text-white">Voice Library</p>
+                        <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Manage Custom</p>
                       </div>
                     </button>
 
@@ -856,25 +856,25 @@ const App: React.FC = () => {
 
                     <div className="h-[1px] bg-black/5 dark:bg-white/5 mx-4 my-2" />
 
-                    <div className="px-4 py-3">
+                    <div className="px-3 md:px-4 py-2.5 md:py-3">
                       <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-banana/10 text-banana rounded-xl flex items-center justify-center">
-                            <Volume2 className="w-5 h-5" />
+                        <div className="flex items-center gap-2 md:gap-3">
+                          <div className="w-8 h-8 md:w-10 md:h-10 bg-banana/10 text-banana rounded-xl flex items-center justify-center">
+                            <Volume2 className="w-4 h-4 md:w-5 md:h-5" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white">Audio Overlay</p>
-                            <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Playback Controls</p>
+                            <p className="text-xs md:text-sm font-bold text-slate-900 dark:text-white">Audio Overlay</p>
+                            <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Playback Controls</p>
                           </div>
                         </div>
                         <button 
                           onClick={() => setShowAudioOverlay(!showAudioOverlay)}
-                          className={`w-10 h-6 rounded-full transition-all relative outline-none ring-offset-2 focus:ring-2 focus:ring-banana/50 ${showAudioOverlay ? 'bg-banana' : 'bg-slate-200 dark:bg-white/10'}`}
+                          className={`w-9 md:w-10 h-5 md:h-6 rounded-full transition-all relative outline-none ring-offset-2 focus:ring-2 focus:ring-banana/50 ${showAudioOverlay ? 'bg-banana' : 'bg-slate-200 dark:bg-white/10'}`}
                         >
-                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white dark:bg-matte shadow-sm transition-all ${showAudioOverlay ? 'left-5' : 'left-1'}`}></div>
+                          <div className={`absolute top-0.5 md:top-1 w-3.5 md:w-4 h-3.5 md:h-4 rounded-full bg-white dark:bg-matte shadow-sm transition-all ${showAudioOverlay ? 'left-5' : 'left-1'}`}></div>
                         </button>
                       </div>
-                      <p className="text-[10px] text-slate-400 dark:text-white/30 leading-relaxed italic">
+                      <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-white/30 leading-relaxed italic">
                         Show floating controls when Gemini is speaking.
                       </p>
                     </div>
@@ -1327,20 +1327,20 @@ const App: React.FC = () => {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-2xl bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
-              <div className="p-8 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
+              <div className="p-5 md:p-8 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
                 <div>
-                  <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Voice <span className="text-banana">Library</span></h3>
-                  <p className="text-xs text-slate-400 dark:text-white/20 font-bold uppercase tracking-widest mt-1">Manage your custom AI references</p>
+                  <h3 className="text-lg md:text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Voice <span className="text-banana">Library</span></h3>
+                  <p className="text-[10px] md:text-xs text-slate-400 dark:text-white/20 font-bold uppercase tracking-widest mt-1">Manage your custom AI references</p>
                 </div>
                 <button 
                   onClick={() => setIsVoiceLibraryOpen(false)}
-                  className="p-3 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all transform hover:rotate-90"
+                  className="p-2 md:p-3 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all transform hover:rotate-90"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
               </div>
 
-              <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              <div className="p-5 md:p-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 {customVoices.length === 0 ? (
                   <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 opacity-40">
                     <div className="w-20 h-20 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center">
@@ -1364,8 +1364,8 @@ const App: React.FC = () => {
                       >
                         <div className="flex items-start justify-between">
                           <div className="min-w-0">
-                            <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest truncate">{voice.name}</p>
-                            <p className="text-[10px] text-slate-400 dark:text-white/30 truncate mt-0.5">Reference Sample</p>
+                            <p className="text-[10px] md:text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest truncate">{voice.name}</p>
+                            <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-white/30 truncate mt-0.5">Reference Sample</p>
                           </div>
                           <div className="flex items-center gap-1">
                             <button 
@@ -1373,17 +1373,17 @@ const App: React.FC = () => {
                                 const audio = new Audio(voice.sampleUrl);
                                 audio.play().catch(console.error);
                               }}
-                              className="p-2 bg-white dark:bg-white/10 rounded-xl text-slate-400 hover:text-banana dark:hover:text-banana transition-all shadow-sm"
+                              className="p-1.5 md:p-2 bg-white dark:bg-white/10 rounded-xl text-slate-400 hover:text-banana dark:hover:text-banana transition-all shadow-sm"
                               title="Play Sample"
                             >
-                              <Play className="w-4 h-4 fill-current" />
+                              <Play className="w-3 h-3 md:w-4 md:h-4 fill-current" />
                             </button>
                             <button 
                               onClick={(e) => removeCustomVoice(voice.id, e)}
-                              className="p-2 bg-white dark:bg-white/10 rounded-xl text-slate-400 hover:text-red-500 transition-all shadow-sm"
+                              className="p-1.5 md:p-2 bg-white dark:bg-white/10 rounded-xl text-slate-400 hover:text-red-500 transition-all shadow-sm"
                               title="Delete Voice"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
                             </button>
                           </div>
                         </div>
@@ -1409,18 +1409,18 @@ const App: React.FC = () => {
                   </div>
                 )}
 
-                <div className="mt-8 p-6 bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-black/5 dark:border-white/5 group-hover:border-banana/20 transition-all">
+                <div className="mt-6 md:mt-8 p-4 md:p-6 bg-slate-50 dark:bg-white/5 rounded-[1.5rem] md:rounded-[2rem] border border-black/5 dark:border-white/5 group-hover:border-banana/20 transition-all">
                   <button 
                     onClick={() => setShowVoiceHelp(!showVoiceHelp)}
                     className="flex items-center justify-between w-full text-left outline-none"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${showVoiceHelp ? 'bg-banana text-black' : 'bg-slate-100 dark:bg-white/10 text-slate-400'}`}>
-                        <HelpCircle className="w-5 h-5" />
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <div className={`w-7 h-7 md:w-8 md:h-8 rounded-xl flex items-center justify-center transition-all ${showVoiceHelp ? 'bg-banana text-black' : 'bg-slate-100 dark:bg-white/10 text-slate-400'}`}>
+                        <HelpCircle className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">What is an AI Reference?</p>
-                        <p className="text-[8px] text-slate-400 dark:text-white/20 uppercase font-bold tracking-tighter">Understanding custom voices</p>
+                        <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">What is an AI Reference?</p>
+                        <p className="text-[7px] md:text-[8px] text-slate-400 dark:text-white/20 uppercase font-bold tracking-tighter">Understanding custom voices</p>
                       </div>
                     </div>
                     <motion.div
@@ -1595,46 +1595,44 @@ const App: React.FC = () => {
       {isKeyModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="api-modal-title">
           <div className="absolute inset-0 bg-black/60 dark:bg-black/80 overlay-blur animate-fade-in" onClick={() => setIsKeyModalOpen(false)}></div>
-          <div className="relative w-full max-w-md bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-3xl shadow-2xl p-8 animate-slide-up">
-            <div className="flex items-center justify-between mb-8">
-              <h3 id="api-modal-title" className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">API Settings</h3>
+          <div className="relative w-full max-w-md bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-3xl shadow-2xl p-6 md:p-8 animate-slide-up">
+            <div className="flex items-center justify-between mb-6 md:mb-8">
+              <h3 id="api-modal-title" className="text-lg md:text-xl font-bold text-slate-900 dark:text-white tracking-tight">API Settings</h3>
               <button 
                 onClick={() => setIsKeyModalOpen(false)}
                 aria-label="Close modal"
-                className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors focus:ring-2 focus:ring-banana/50 outline-none"
+                className="p-1.5 md:p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors focus:ring-2 focus:ring-banana/50 outline-none"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-5 h-5 md:w-6 md:h-6" />
               </button>
             </div>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-[10px] font-black text-slate-400 dark:text-white/30 uppercase mb-2 tracking-[0.2em]">Gemini API Key</label>
+                <label className="block text-[9px] md:text-[10px] font-black text-slate-400 dark:text-white/30 uppercase mb-2 tracking-[0.2em]">Gemini API Key</label>
                 <input 
                   type="password"
                   value={tempKey}
                   onChange={(e) => setTempKey(e.target.value)}
                   placeholder="Enter your API key..."
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-4 text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-banana/50 focus:border-banana outline-none transition-all"
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-3 md:p-4 text-xs md:text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-banana/50 focus:border-banana outline-none transition-all"
                 />
-                <p className="mt-2 text-[10px] text-slate-400 dark:text-white/20 leading-relaxed">
+                <p className="mt-2 text-[9px] md:text-[10px] text-slate-400 dark:text-white/20 leading-relaxed">
                   Your key is stored locally in your browser and never sent to our servers. 
                   Get one at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-banana hover:underline">Google AI Studio</a>.
                 </p>
               </div>
               
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2 md:pt-4">
                 <button 
                   onClick={() => setIsKeyModalOpen(false)}
-                  className="flex-1 py-4 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/50 rounded-2xl font-bold text-xs tracking-tight hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+                  className="flex-1 py-3 md:py-4 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/50 rounded-2xl font-bold text-xs tracking-tight hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={saveApiKey}
-                  className="flex-1 py-4 bg-banana hover:bg-[#EED125] text-black rounded-2xl font-bold text-xs tracking-tight shadow-lg shadow-banana/10 transition-all"
+                  className="flex-1 py-3 md:py-4 bg-banana hover:bg-[#EED125] text-black rounded-2xl font-bold text-xs tracking-tight shadow-lg shadow-banana/10 transition-all"
                 >
                   Save Key
                 </button>
