@@ -843,14 +843,14 @@ const App: React.FC = () => {
                         setIsHotkeysModalOpen(true);
                         setIsMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
+                      className="w-full flex items-center gap-2 md:gap-3 p-3 md:p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all group"
                     >
-                      <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
-                        <Keyboard className="w-5 h-5" />
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-banana/20 group-hover:text-banana transition-colors">
+                        <Keyboard className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">Hotkeys</p>
-                        <p className="text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Keyboard Shortcuts</p>
+                        <p className="text-xs md:text-sm font-bold text-slate-900 dark:text-white">Hotkeys</p>
+                        <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest">Keyboard Shortcuts</p>
                       </div>
                     </button>
 
@@ -1510,36 +1510,36 @@ const App: React.FC = () => {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-lg bg-white dark:bg-surface-dark border border-black/5 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
-              <div className="p-8 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
+              <div className="p-5 md:p-8 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
                 <div>
-                  <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Keyboard <span className="text-banana">Shortcuts</span></h3>
-                  <p className="text-xs text-slate-400 dark:text-white/20 font-bold uppercase tracking-widest mt-1">Configure your hotkeys</p>
+                  <h3 className="text-lg md:text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Keyboard <span className="text-banana">Shortcuts</span></h3>
+                  <p className="text-[10px] md:text-xs text-slate-400 dark:text-white/20 font-bold uppercase tracking-widest mt-1">Configure your hotkeys</p>
                 </div>
                 <button 
                   onClick={() => setIsHotkeysModalOpen(false)}
-                  className="p-3 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all transform hover:rotate-90"
+                  className="p-2 md:p-3 bg-slate-100 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all transform hover:rotate-90"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
               </div>
 
-              <div className="p-8 space-y-6">
-                <div className="space-y-4">
+              <div className="p-5 md:p-8 space-y-4 md:space-y-6">
+                <div className="space-y-3 md:space-y-4">
                   {[
                     { key: 'toggleSession', label: 'Start/Stop Session', icon: Play },
                     { key: 'togglePause', label: 'Pause/Resume AI', icon: Pause },
                     { key: 'toggleTranslation', label: 'Toggle Translation', icon: Volume2 }
                   ].map((setting) => (
                     <div key={setting.key} className="flex items-center justify-between group">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-banana transition-colors">
-                          <setting.icon className="w-4 h-4" />
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-banana transition-colors">
+                          <setting.icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
-                        <p className="text-sm font-bold text-slate-700 dark:text-white/80">{setting.label}</p>
+                        <p className="text-xs md:text-sm font-bold text-slate-700 dark:text-white/80">{setting.label}</p>
                       </div>
                       <button
                         onClick={() => activeHotkeySetting === setting.key ? setActiveHotkeySetting(null) : setActiveHotkeySetting(setting.key)}
-                        className={`min-w-[100px] h-10 rounded-xl border font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
+                        className={`min-w-[80px] md:min-w-[100px] h-8 md:h-10 rounded-xl border font-mono text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all ${
                           activeHotkeySetting === setting.key
                             ? 'bg-banana/20 border-banana text-banana shadow-[0_0_15px_rgba(238,209,37,0.2)]'
                             : 'bg-slate-50 dark:bg-white/5 border-transparent text-slate-400 dark:text-white/20 hover:border-banana/50 hover:text-banana'
@@ -1580,7 +1580,7 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              <div className="p-8 bg-slate-50 dark:bg-white/5 flex items-center justify-center">
+              <div className="p-5 md:p-8 bg-slate-50 dark:bg-white/5 flex items-center justify-center">
                 <button 
                   onClick={() => setHotkeys({ toggleSession: 'KeyS', togglePause: 'KeyP', toggleTranslation: 'KeyT' })}
                   className="px-6 py-2 text-[10px] font-bold text-slate-400 hover:text-banana transition-all uppercase tracking-widest"
