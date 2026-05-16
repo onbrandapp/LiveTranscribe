@@ -155,6 +155,12 @@ const App: React.FC = () => {
   const [tempKey, setTempKey] = useState(apiKey);
   
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
+  const [micStatus, setMicStatus] = useState({
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+    volume: 0,
+  });
   const [isModelSpeaking, setIsModelSpeaking] = useState(false);
   const [isModelPlaybackPaused, setIsModelPlaybackPaused] = useState(false);
 
@@ -462,6 +468,7 @@ const App: React.FC = () => {
     modelTextBuffer.current = '';
     isPausedRef.current = false;
     setSessionState({ isActive: false, isPaused: false, error: null });
+    setMicStatus(prev => ({ ...prev, volume: 0 }));
     setIsUserSpeaking(false);
     setIsModelSpeaking(false);
     setIsModelPlaybackPaused(false);
@@ -531,6 +538,14 @@ const App: React.FC = () => {
         } 
       });
       micStreamRef.current = stream;
+      const track = stream.getAudioTracks()[0];
+      const settings = track.getSettings();
+      setMicStatus(prev => ({
+        ...prev,
+        echoCancellation: !!settings.echoCancellation,
+        noiseSuppression: !!settings.noiseSuppression,
+        autoGainControl: !!settings.autoGainControl,
+      }));
 
       const systemInstruction = (isTranslationEnabled 
         ? `You are a high-fidelity real-time audio translator. 
@@ -568,6 +583,7 @@ const App: React.FC = () => {
               const inputData = e.inputBuffer.getChannelData(0);
               const volume = inputData.reduce((a, b) => a + Math.abs(b), 0) / inputData.length;
               setIsUserSpeaking(volume > 0.005);
+              setMicStatus(prev => ({ ...prev, volume }));
 
               const pcmData = createPcmBlob(inputData);
               sessionPromise.then(session => {
@@ -723,6 +739,34 @@ const App: React.FC = () => {
               </span>
             </div>
           </div>
+          
+          {sessionState.isActive && (
+            <div className="hidden sm:flex items-center gap-4 pl-4 border-l border-black/5 dark:border-white/5">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${micStatus.echoCancellation ? 'bg-green-500' : 'bg-slate-300 dark:bg-white/10'}`} />
+                  <span className="text-[8px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest">EC</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${micStatus.noiseSuppression ? 'bg-green-500' : 'bg-slate-300 dark:bg-white/10'}`} />
+                  <span className="text-[8px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest">NS</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${micStatus.autoGainControl ? 'bg-green-500' : 'bg-slate-300 dark:bg-white/10'}`} />
+                  <span className="text-[8px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest">AGC</span>
+                </div>
+                <div className="w-12 h-1 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, micStatus.volume * 500)}%` }}
+                    className={`h-full ${micStatus.volume > 0.1 ? 'bg-red-500' : 'bg-banana'}`}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="flex items-center gap-1 md:gap-3 shrink-0">
