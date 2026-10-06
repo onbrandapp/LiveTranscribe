@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
           registerType: 'autoUpdate',
           includeAssets: ['icon.svg'],
           manifest: {
-            name: 'Gemini Live Transcribe',
+            name: 'Live Transcribe',
             short_name: 'Live Transcribe',
             description: 'AI powered live transcription and translation with custom voices.',
             theme_color: '#FFE135',

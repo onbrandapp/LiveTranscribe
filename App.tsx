@@ -730,7 +730,7 @@ const App: React.FC = () => {
           </div>
           <div className="min-w-0">
             <h1 className="text-sm md:text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic truncate">
-              Gemini <span className="text-banana">Live</span>
+              Live <span className="text-banana">Transcribe</span>
             </h1>
             <div className="flex items-center gap-1">
               <span className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-full ${sessionState.isActive ? 'bg-banana animate-pulse' : 'bg-slate-200 dark:bg-white/10'}`}></span>

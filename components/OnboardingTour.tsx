@@ -19,7 +19,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) => {
   const steps: Step[] = useMemo(() => [
     {
       id: 'welcome',
-      title: 'Welcome to Gemini Live',
+      title: 'Welcome to Live Transcribe',
       content: 'Experience real-time transcription and translation powered by Gemini 2.5 Flash. Let\'s take a quick tour of the core features.',
     },
     {
